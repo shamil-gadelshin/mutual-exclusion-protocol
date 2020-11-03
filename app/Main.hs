@@ -11,7 +11,13 @@ import Data.Maybe
 
 
 main :: IO ()
-main = forever $ do
+main = do
+    forkIO $ forever $ do getRedisInfo
+    forever $ do updateRedis
+    
+
+updateRedis :: IO ()
+updateRedis = do
     conn <- connect defaultConnectInfo
     runRedis conn $ do
         zcounter <- get "zcounter"
@@ -23,3 +29,11 @@ main = forever $ do
         liftIO $ threadDelay 1000000
         final <- get "zcounter"
         liftIO $ print $ final
+
+getRedisInfo :: IO ()
+getRedisInfo = do
+    conn <- connect defaultConnectInfo
+    runRedis conn $ do
+        zcounter <- get "zcounter"
+        liftIO $ print $ zcounter
+        liftIO $ threadDelay 300000
