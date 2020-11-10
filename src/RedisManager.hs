@@ -13,14 +13,14 @@ import Control.Concurrent
 import Data.ByteString.Char8
 import Data.ByteString.Conversion
 import Data.Maybe
+import Data.Either.Combinators
 
 updateRedis :: IO ()
 updateRedis = do
     conn <- connect defaultConnectInfo
     runRedis conn $ do
         counter <- get counterName
-        convCounter <- case counter of Right (Just counterStr) -> return $ Just (read . unpack $ counterStr :: Integer)
-                                       _ -> return Nothing
+        convCounter <- return . convertCounter $ (join . rightToMaybe) counter
         next <- return $ toByteString' <$> (+1) <$> convCounter
         set counterName $ fromMaybe "0" next
         liftIO $ threadDelay 1000000
@@ -38,3 +38,7 @@ getRedisInfo = do
 
 counterName :: ByteString
 counterName = "xcounter"
+
+convertCounter :: Maybe ByteString -> Maybe Integer
+convertCounter = (<$>) $ read . unpack 
+

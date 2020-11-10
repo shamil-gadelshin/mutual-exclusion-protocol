@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c43cb8eae50c3319f79916e8b4c8763e43f70a3d4b811d5bc17b7e54b5a5fb8c
+-- hash: f32100e1d5e37ea1318990bf1cbe871e09ea78e8d5d8171b3bc72efbc1841f3d
 
 name:           redisClient
 version:        0.1.0.0
@@ -40,6 +40,7 @@ library
     , bytestring
     , bytestring-conversion
     , cmdargs
+    , either
     , hedis
     , mtl
     , text
@@ -59,6 +60,7 @@ executable redisClient-exe
     , bytestring
     , bytestring-conversion
     , cmdargs
+    , either
     , hedis
     , mtl
     , redisClient
@@ -80,6 +82,7 @@ test-suite redisClient-test
     , bytestring
     , bytestring-conversion
     , cmdargs
+    , either
     , hedis
     , mtl
     , redisClient

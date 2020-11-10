@@ -29,6 +29,7 @@ dependencies:
 - text
 - aeson
 - aeson-pretty
+- either
 
 library:
   source-dirs: src
