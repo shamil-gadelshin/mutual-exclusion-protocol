@@ -25,6 +25,10 @@ dependencies:
 - mtl
 - bytestring
 - bytestring-conversion
+- cmdargs
+- text
+- aeson
+- aeson-pretty
 
 library:
   source-dirs: src

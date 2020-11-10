@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d4c132162bdaed092679433d6e603929d3093ef8d384b39ecbbd4129d83704ca
+-- hash: c43cb8eae50c3319f79916e8b4c8763e43f70a3d4b811d5bc17b7e54b5a5fb8c
 
 name:           redisClient
 version:        0.1.0.0
@@ -27,17 +27,22 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Message
+      RedisManager
   other-modules:
       Paths_redisClient
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , aeson-pretty
+    , base >=4.7 && <5
     , bytestring
     , bytestring-conversion
+    , cmdargs
     , hedis
     , mtl
+    , text
   default-language: Haskell2010
 
 executable redisClient-exe
@@ -48,12 +53,16 @@ executable redisClient-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , aeson-pretty
+    , base >=4.7 && <5
     , bytestring
     , bytestring-conversion
+    , cmdargs
     , hedis
     , mtl
     , redisClient
+    , text
   default-language: Haskell2010
 
 test-suite redisClient-test
@@ -65,10 +74,14 @@ test-suite redisClient-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , aeson-pretty
+    , base >=4.7 && <5
     , bytestring
     , bytestring-conversion
+    , cmdargs
     , hedis
     , mtl
     , redisClient
+    , text
   default-language: Haskell2010
