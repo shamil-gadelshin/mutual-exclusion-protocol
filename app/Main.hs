@@ -10,13 +10,16 @@ import Message;
 import RedisManager;
 import Config
 
+-- Add TCP echo client-server
+-- Handle exception.
+
 main :: IO ()
 main = do
     print =<< getTimestamp 
     Char8.putStrLn getMessage
     print =<< getConfiguration
-    forkIO $ forever $ do getRedisInfo
-    forever $ do updateRedis
+    forkIO $ forever getRedisInfo
+    forever updateRedis
     
 
 getTimestamp :: IO Integer 
