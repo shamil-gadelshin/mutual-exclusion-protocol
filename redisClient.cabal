@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f32100e1d5e37ea1318990bf1cbe871e09ea78e8d5d8171b3bc72efbc1841f3d
+-- hash: 735bf7029a206588a4b589b61bc23def9d2f780406f848416d14809af16b664f
 
 name:           redisClient
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      Config
       Message
       RedisManager
   other-modules:

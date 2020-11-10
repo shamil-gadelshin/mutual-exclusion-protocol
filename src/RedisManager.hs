@@ -20,7 +20,7 @@ updateRedis = do
     conn <- connect defaultConnectInfo
     runRedis conn $ do
         counter <- get counterName
-        convCounter <- return . convertCounter $ (join . rightToMaybe) counter
+        convCounter <- return . convertCounterValue $ (join . rightToMaybe) counter
         next <- return $ toByteString' <$> (+1) <$> convCounter
         set counterName $ fromMaybe "0" next
         liftIO $ threadDelay 1000000
@@ -39,6 +39,6 @@ getRedisInfo = do
 counterName :: ByteString
 counterName = "xcounter"
 
-convertCounter :: Maybe ByteString -> Maybe Integer
-convertCounter = (<$>) $ read . unpack 
+convertCounterValue :: Maybe ByteString -> Maybe Integer
+convertCounterValue = (<$>) $ read . unpack 
 
