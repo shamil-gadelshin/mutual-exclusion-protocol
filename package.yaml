@@ -30,6 +30,7 @@ dependencies:
 - aeson
 - aeson-pretty
 - either
+- time
 
 library:
   source-dirs: src
