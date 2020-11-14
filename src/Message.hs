@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Message
-    ( getMessage
+    ( getSampleMessage
+    , convertMessage
     , Message(..)
     ) where
 
@@ -13,8 +14,11 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString
 import qualified Data.ByteString.Lazy as LBS
 
-getMessage :: ByteString
-getMessage =  LBS.toStrict $ encodePretty $ Message "Server1" "10"
+getSampleMessage :: ByteString
+getSampleMessage =  LBS.toStrict $ encodePretty $ Message "Server1" "10"
+
+convertMessage :: Message -> ByteString
+convertMessage =  LBS.toStrict . encodePretty
 
 data Message = Message { id :: String
                        , timestamp :: String

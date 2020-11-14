@@ -11,13 +11,18 @@ import RedisManager;
 import Config
 
 -- Add TCP echo client-server
--- Handle exception.
+-- Handle exceptions.
 
 main :: IO ()
 main = do
-    print =<< getTimestamp 
-    Char8.putStrLn getMessage
-    print =<< getConfiguration
+    config <- getConfiguration
+    ts <- getTimestamp 
+    msg <- return $ Message (pid config) (show ts)
+    
+    Char8.putStrLn $ convertMessage msg
+    print ts
+    print config
+    
     forkIO $ forever getRedisInfo
     forever updateRedis
     
