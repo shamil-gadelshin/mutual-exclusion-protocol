@@ -27,15 +27,9 @@ import TcpManager;
 main :: IO ()
 main = do
     config <- getConfiguration
-    
-    
-
---    Char8.putStrLn =<< convertMessage <$> (composeMessage $ pid config)
-    Char8.putStrLn =<< convertMessage <$> (composeMessage $ pid config)
-    
     forkIO $ case pid config of
                 "server1" -> runServer $ local_port config
-                otherwise -> runClient (remote_port config) (\() -> convertMessage <$> (composeMessage $ pid config))
+                otherwise -> runClient (remote_port config) $ convertMessage <$> (composeMessage $ pid config)
     forkIO $ forever getRedisInfo
     forever updateRedis
 

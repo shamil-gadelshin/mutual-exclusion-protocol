@@ -53,20 +53,20 @@ runTCPServer mhost port server = withSocketsDo $ do
         void $ forkFinally (server conn) (const $ gracefulClose conn 5000)
 
 
-runClient :: String -> (() -> IO C.ByteString)-> IO ()
+runClient :: String -> (IO C.ByteString)-> IO ()
 runClient port getMessage= do
-  print $ "Client connected to port: " ++ port
-  runTCPClient "127.0.0.1" port $ sendMessages getMessage
+    print $ "Client connected to port: " ++ port
+    runTCPClient "127.0.0.1" port $ sendMessages getMessage
 
-sendMessages :: (() -> IO C.ByteString) -> Socket -> IO () 
+sendMessages :: (IO C.ByteString) -> Socket -> IO () 
 sendMessages getMessage s = do
-  msg <- getMessage ()
-  sendAll s msg
-  msg <- recv s 1024
-  putStr "Received: "
-  C.putStrLn msg
-  liftIO $ threadDelay 500000
-  sendMessages getMessage s
+    sMsg <- getMessage
+    sendAll s sMsg
+    rMsg <- recv s 1024
+    putStr "Received: "
+    C.putStrLn rMsg
+    liftIO $ threadDelay 500000
+    sendMessages getMessage s
 
 -- from the "network-run" package.
 runTCPClient :: HostName -> ServiceName -> (Socket -> IO a) -> IO a
