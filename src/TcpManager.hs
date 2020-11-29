@@ -14,13 +14,14 @@ import Network.Socket.ByteString (recv, sendAll)
 import qualified Data.ByteString.Char8 as C
 import Control.Monad.Trans
 import Control.Concurrent
+import Control.Concurrent.Chan
 
 
 
 runServer :: String -> IO ()
 runServer port = do 
     print $ "Server started on port: " ++ port
-    runTCPServer Nothing port talk
+    startTCPServer Nothing port talk
       where
         talk s = do
             msg <- recv s 1024
@@ -30,8 +31,8 @@ runServer port = do
               talk s
 
 -- from the "network-run" package.
-runTCPServer :: Maybe HostName -> ServiceName -> (Socket -> IO a) -> IO a
-runTCPServer mhost port server = withSocketsDo $ do
+startTCPServer :: Maybe HostName -> ServiceName -> (Socket -> IO a) -> IO a
+startTCPServer mhost port server = withSocketsDo $ do
     addr <- resolve
     E.bracket (open addr) close loop
   where
@@ -53,24 +54,24 @@ runTCPServer mhost port server = withSocketsDo $ do
         void $ forkFinally (server conn) (const $ gracefulClose conn 5000)
 
 
-runClient :: String -> (IO C.ByteString)-> IO ()
-runClient port getMessage= do
+runClient :: String -> Chan C.ByteString-> IO ()
+runClient port chan = do
     print $ "Client connected to port: " ++ port
-    runTCPClient "127.0.0.1" port $ sendMessages getMessage
+    startTCPClient "127.0.0.1" port $ sendMessages chan
 
-sendMessages :: (IO C.ByteString) -> Socket -> IO () 
-sendMessages getMessage s = do
-    sMsg <- getMessage
+sendMessages :: Chan C.ByteString -> Socket -> IO () 
+sendMessages chan s = do
+    sMsg <- readChan chan
     sendAll s sMsg
     rMsg <- recv s 1024
     putStr "Received: "
     C.putStrLn rMsg
     liftIO $ threadDelay 500000
-    sendMessages getMessage s
+    sendMessages chan s
 
 -- from the "network-run" package.
-runTCPClient :: HostName -> ServiceName -> (Socket -> IO a) -> IO a
-runTCPClient host port client = withSocketsDo $ do
+startTCPClient :: HostName -> ServiceName -> (Socket -> IO a) -> IO a
+startTCPClient host port client = withSocketsDo $ do
     addr <- resolve
     E.bracket (open addr) close client
   where

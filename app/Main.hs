@@ -5,11 +5,11 @@ import Control.Monad
 import Control.Concurrent
 import Data.ByteString.Char8 as Char8
 import Data.Time.Clock.POSIX (getPOSIXTime)
+import Control.Monad.Trans
 
 import qualified Control.Exception as E
 import qualified Data.ByteString as S
-import Network.Socket
-import Network.Socket.ByteString (recv, sendAll)
+import Control.Concurrent.Chan
 
 import Message;
 import RedisManager;
@@ -29,12 +29,24 @@ import LTS;
 main :: IO ()
 main = do
     config <- getConfiguration
+    chan <- newChan
 --    forkIO $ case pid config of
     case pid config of
                 "server1" -> runServer $ local_port config
-                otherwise -> runClient (remote_port config) $ convertMessage <$> (composeMessage $ pid config)
---    forkIO $ forever getRedisInfo
+                otherwise -> do
+                    forkIO $ forever $ runMessageSource (pid config) chan
+                    runClient (remote_port config) chan 
+
+                -- $ convertMessage <$> (composeMessage $ )
+    
+--     forever getRedisInfo
 --    forever updateRedis
+
+runMessageSource :: String -> Chan S.ByteString -> IO ()
+runMessageSource serverId chan = do
+     msgStr <- convertMessage <$> (composeMessage $ serverId)
+     writeChan chan msgStr
+     liftIO $ threadDelay 1000000
 
 composeMessage :: String -> IO Message
 composeMessage pid = do
