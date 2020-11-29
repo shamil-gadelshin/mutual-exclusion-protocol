@@ -52,12 +52,19 @@ startTCPServer mhost port server = withSocketsDo $ do
     loop sock = forever $ do
         (conn, _peer) <- accept sock
         void $ forkFinally (server conn) (const $ gracefulClose conn 5000)
-
+  
 
 runClient :: String -> Chan C.ByteString-> IO ()
 runClient port chan = do
-    print $ "Client connected to port: " ++ port
-    startTCPClient "127.0.0.1" port $ sendMessages chan
+    print $ "Client connects to port: " ++ port
+    E.catch startClient handler
+    where
+      startClient = startTCPClient "127.0.0.1" port $ sendMessages chan
+      handler :: E.SomeException -> IO ()
+      handler ex = do 
+        putStrLn $ "Caught exception: " ++ show ex
+        liftIO $ threadDelay 500000
+        E.catch startClient handler
 
 sendMessages :: Chan C.ByteString -> Socket -> IO () 
 sendMessages chan s = do

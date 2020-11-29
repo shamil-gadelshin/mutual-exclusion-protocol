@@ -39,10 +39,8 @@ main = do
     lts <- newMVar ltsVal
     config <- getConfiguration
     printf "%s started\n" (pid config)
-    liftIO $ threadDelay 4000000
     chan <- newChan
     forkIO $ runServer $ local_port config
-    liftIO $ threadDelay 3000000
     forkIO $ runClient (remote_port config) chan 
     forever $ runMessageSource (pid config) lts chan
     
