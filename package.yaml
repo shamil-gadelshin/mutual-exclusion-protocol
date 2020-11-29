@@ -32,6 +32,7 @@ dependencies:
 - either
 - time
 - network
+- containers
 
 library:
   source-dirs: src

@@ -15,6 +15,7 @@ import Message;
 import RedisManager;
 import Config
 import TcpManager;
+import LTS;
 
 -- Add TCP echo client-server:
     -- catch 'not connected exception'
@@ -22,21 +23,23 @@ import TcpManager;
 -- Handle exceptions.
 -- add config from json for remote servers
 -- add distributed process transport
+-- add file as protected resource
 
 
 main :: IO ()
 main = do
     config <- getConfiguration
-    forkIO $ case pid config of
+--    forkIO $ case pid config of
+    case pid config of
                 "server1" -> runServer $ local_port config
                 otherwise -> runClient (remote_port config) $ convertMessage <$> (composeMessage $ pid config)
-    forkIO $ forever getRedisInfo
-    forever updateRedis
+--    forkIO $ forever getRedisInfo
+--    forever updateRedis
 
 composeMessage :: String -> IO Message
 composeMessage pid = do
     ts <- getTimestamp 
-    return $ Message pid (show ts)
+    return $ Message pid (show ts) Request
 
 getTimestamp :: IO Integer
 getTimestamp = round . (* 1000) <$> getPOSIXTime
