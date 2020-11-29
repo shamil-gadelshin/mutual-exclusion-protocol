@@ -64,7 +64,7 @@ sendMessages chan s = do
     sMsg <- readChan chan
     sendAll s sMsg
     rMsg <- recv s 1024
-    putStr "Received: "
+    putStr "Sent: "
     C.putStrLn rMsg
     liftIO $ threadDelay 500000
     sendMessages chan s
