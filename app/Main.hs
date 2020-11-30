@@ -40,13 +40,13 @@ main = do
     forkIO $ runServer $ local_port config
     forkIO $ runClient (remote_port config) chan 
     forever $ runMessageSource (pid config) lts chan
-    
+     
 --    forever getRedisInfo
 --    forever updateRedis
 
 runMessageSource :: String -> MVar LTS.Lts -> Chan S.ByteString -> IO ()
 runMessageSource serverId lts chan = do
-     msgStr <- convertMessage <$> (composeMessage lts serverId)
+     msgStr <- convertMessage <$> composeMessage lts serverId
      writeChan chan msgStr
      liftIO $ threadDelay 1000000
 

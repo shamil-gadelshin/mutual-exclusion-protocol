@@ -10,7 +10,7 @@ module LTS
     ) where
 
 -- Lamport timestamp type
-data Lts = Lts Integer
+newtype Lts = Lts Integer
 
 -- creates new timestamp with default value = 1
 new :: Lts 
@@ -18,7 +18,7 @@ new = Lts 1
 
 -- creates new timestamp
 create :: Integer -> Lts 
-create c = Lts c
+create = Lts
 
 -- gets the current value
 peek :: Lts -> Integer
@@ -30,4 +30,4 @@ touch (Lts c) = Lts $ c+1
 
 -- increments maximum of the provided timestamp values
 update :: Lts -> Lts -> Lts
-update (Lts u) (Lts c) = Lts $ (max u c) + 1 
+update (Lts u) (Lts c) = Lts $ max u c + 1

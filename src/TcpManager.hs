@@ -5,7 +5,7 @@ module TcpManager
     , runClient
     ) where
 
-import Control.Concurrent (forkFinally)
+import Control.Concurrent
 import qualified Control.Exception as E
 import Control.Monad (unless, forever, void)
 import qualified Data.ByteString as S
