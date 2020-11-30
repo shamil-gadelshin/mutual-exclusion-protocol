@@ -6,7 +6,7 @@ module TcpManager
     ) where
 
 import qualified Control.Exception as E
-import Control.Monad (unless, forever, void)
+import Control.Monad (unless, forever, void, when)
 import qualified Data.ByteString as S
 import Network.Socket
 import Network.Socket.ByteString (recv, sendAll)
@@ -32,17 +32,14 @@ runServer port chan = do
 
 parseMessageBatch :: C.ByteString -> Chan C.ByteString-> IO ()
 parseMessageBatch msg chan = do
-  if not $ C.null msg 
-  then
+  unless (C.null msg) $ 
     case C.breakSubstring delimiter msg of
       (x,xs) | C.null xs -> do
                 writeChan chan x
              | otherwise -> do
-                if not $ C.null x 
-                  then writeChan chan x
-                  else return ()
+                unless (C.null x) $
+                   writeChan chan x
                 parseMessageBatch (C.drop (C.length delimiter) xs) chan
-  else return ()
 
 -- from the "network-run" package.
 startTCPServer :: Maybe HostName -> ServiceName -> (Socket -> IO a) -> IO a
