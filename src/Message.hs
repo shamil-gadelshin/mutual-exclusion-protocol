@@ -2,8 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Message
-    ( getSampleMessage
-    , encodeMessage
+    ( encodeMessage
     , decodeMessage
     , Type(..)
     , Message(..)
@@ -19,7 +18,7 @@ import Data.ByteString
 import qualified Data.ByteString.Lazy as LBS
 
 getSampleMessage :: ByteString
-getSampleMessage =  LBS.toStrict $ encodePretty $ Message "Server1" "10" Request
+getSampleMessage =  LBS.toStrict $ encodePretty $ Message "Server1" 10 Request
 
 encodeMessage :: Message -> ByteString
 encodeMessage =  LBS.toStrict . encodePretty
@@ -32,7 +31,7 @@ instance FromJSON Type
 instance ToJSON Type
 
 data Message = Message { id :: String
-                       , timestamp :: String
+                       , timestamp :: Integer
                        , msgType :: Type
                        } deriving (Show)
 

@@ -6,6 +6,7 @@ module LTS
     , update
     , new
     , peek
+    , create
     , Lts(..)
     ) where
 
