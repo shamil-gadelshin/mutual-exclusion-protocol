@@ -13,24 +13,21 @@ import qualified Data.Text.IO as T
 import qualified Control.Exception as E
 import qualified Data.ByteString as S
 
-
 import Message;
 import RedisManager;
 import Config
 import TcpManager;
 import qualified LTS;
 
--- Add TCP echo client-server:
-    -- catch 'not connected exception'
-    -- reconnect on server shutdown
-    
--- Handle exceptions.
--- add config from json for remote servers
--- add distributed process transport
--- add file as protected resource
+-- Extra:
+    -- add config from json for remote servers
+    -- add distributed process transport
+    -- add file as protected resource
 
 -- Done:
     -- add composed message
+    -- catch 'not connected exception' for tcp client
+    -- add lamport timestamps
 
 
 main :: IO ()
