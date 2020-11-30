@@ -15,6 +15,9 @@ import Control.Monad.Trans
 import Control.Concurrent
 import Control.Concurrent.Chan
 
+-- TODO: Refactor message separation
+delimiter :: C.ByteString
+delimiter = "####"
 
 runServer :: String -> Chan C.ByteString-> IO ()
 runServer port chan = do 
@@ -22,10 +25,24 @@ runServer port chan = do
     startTCPServer Nothing port talk
       where
         talk s = do
-            msg <- recv s 1024
+            msg <- recv s 1024 
             unless (S.null msg) $ do
-              writeChan chan msg
+              parseMessageBatch msg chan
               talk s
+
+parseMessageBatch :: C.ByteString -> Chan C.ByteString-> IO ()
+parseMessageBatch msg chan = do
+  if not $ C.null msg 
+  then
+    case C.breakSubstring delimiter msg of
+      (x,xs) | C.null xs -> do
+                writeChan chan x
+             | otherwise -> do
+                if not $ C.null x 
+                  then writeChan chan x
+                  else return ()
+                parseMessageBatch (C.drop (C.length delimiter) xs) chan
+  else return ()
 
 -- from the "network-run" package.
 startTCPServer :: Maybe HostName -> ServiceName -> (Socket -> IO a) -> IO a
@@ -67,6 +84,7 @@ sendMessages :: Chan C.ByteString -> Socket -> IO ()
 sendMessages chan s = do
     sMsg <- readChan chan
     sendAll s sMsg
+    sendAll s delimiter
     sendMessages chan s
 
 -- from the "network-run" package.

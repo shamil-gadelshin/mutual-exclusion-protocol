@@ -1,4 +1,3 @@
-
 {-# LANGUAGE OverloadedStrings #-}
 
 import Control.Monad
@@ -6,7 +5,6 @@ import Control.Monad.Trans
 import Control.Concurrent
 import Control.Concurrent.MVar
 import Control.Concurrent.Chan
-import Data.ByteString.Char8 as Char8
 import Text.Printf
 
 import qualified Data.Text.IO as T
@@ -32,6 +30,7 @@ import qualified LTS;
 
 main :: IO ()
 main = do
+ --   print $ S.breakSubstring "####" "{\n    \"id\": \"server2\",\n    \"timestamp\": \"2\",\n    \"msgType\": \"Request\"\n}####"
     let ltsVal = LTS.new
     lts <- newMVar ltsVal
     config <- getConfiguration
@@ -50,7 +49,7 @@ runMessageSource :: String -> MVar LTS.Lts -> Chan S.ByteString -> IO ()
 runMessageSource serverId lts chan = do
      msgStr <- encodeMessage <$> composeMessage lts serverId
      writeChan chan msgStr
-     liftIO $ threadDelay 1000000
+     liftIO $ threadDelay 3000000
 
 composeMessage :: MVar LTS.Lts -> String -> IO Message
 composeMessage lts pid = do
@@ -65,7 +64,9 @@ processInputMessages serverId lts inChan outChan = forever $ do
     msgStr <- readChan inChan
     let msg = decodeMessage msgStr
     print msg
-    -- case msg of 
-    --     Just m -> writeChan outChan $ encodeMessage m 
-    --     Nothing -> error "Cannot decode input message."
+    case msg of 
+        Just m -> do
+            print m
+            writeChan outChan $ encodeMessage m 
+        Nothing -> print "Corrupted message detected." -- TODO: Implement message separation
    
