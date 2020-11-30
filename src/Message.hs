@@ -3,7 +3,8 @@
 
 module Message
     ( getSampleMessage
-    , convertMessage
+    , encodeMessage
+    , decodeMessage
     , Type(..)
     , Message(..)
     ) where
@@ -20,8 +21,11 @@ import qualified Data.ByteString.Lazy as LBS
 getSampleMessage :: ByteString
 getSampleMessage =  LBS.toStrict $ encodePretty $ Message "Server1" "10" Request
 
-convertMessage :: Message -> ByteString
-convertMessage =  LBS.toStrict . encodePretty
+encodeMessage :: Message -> ByteString
+encodeMessage =  LBS.toStrict . encodePretty
+
+decodeMessage :: ByteString -> Maybe Message
+decodeMessage =  decode . LBS.fromStrict
 
 data Type = Request | Reply | Release deriving (Show, Generic)
 instance FromJSON Type

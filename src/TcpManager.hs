@@ -5,7 +5,6 @@ module TcpManager
     , runClient
     ) where
 
-import Control.Concurrent
 import qualified Control.Exception as E
 import Control.Monad (unless, forever, void)
 import qualified Data.ByteString as S
@@ -17,17 +16,15 @@ import Control.Concurrent
 import Control.Concurrent.Chan
 
 
-
-runServer :: String -> IO ()
-runServer port = do 
+runServer :: String -> Chan C.ByteString-> IO ()
+runServer port chan = do 
     print $ "Server started on port: " ++ port
     startTCPServer Nothing port talk
       where
         talk s = do
             msg <- recv s 1024
             unless (S.null msg) $ do
-              C.putStrLn msg
-              sendAll s msg
+              writeChan chan msg
               talk s
 
 -- from the "network-run" package.
@@ -45,7 +42,7 @@ startTCPServer mhost port server = withSocketsDo $ do
     open addr = do
         sock <- socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
         setSocketOption sock ReuseAddr 1
-        withFdSocket sock $ setCloseOnExecIfNeeded
+        withFdSocket sock setCloseOnExecIfNeeded
         bind sock $ addrAddress addr
         listen sock 1024
         return sock
@@ -70,10 +67,6 @@ sendMessages :: Chan C.ByteString -> Socket -> IO ()
 sendMessages chan s = do
     sMsg <- readChan chan
     sendAll s sMsg
-    rMsg <- recv s 1024
-    putStr "Sent: "
-    C.putStrLn rMsg
-    liftIO $ threadDelay 500000
     sendMessages chan s
 
 -- from the "network-run" package.

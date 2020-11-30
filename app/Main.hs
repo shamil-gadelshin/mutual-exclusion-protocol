@@ -36,17 +36,19 @@ main = do
     lts <- newMVar ltsVal
     config <- getConfiguration
     printf "%s started\n" (pid config)
-    chan <- newChan
-    forkIO $ runServer $ local_port config
-    forkIO $ runClient (remote_port config) chan 
-    forever $ runMessageSource (pid config) lts chan
+    outChan <- newChan
+    inChan <- newChan
+    forkIO $ runServer (local_port config) inChan
+    forkIO $ runClient (remote_port config) outChan 
+    forkIO $ processInputMessages (pid config) lts inChan outChan
+    forever $ runMessageSource (pid config) lts outChan
      
 --    forever getRedisInfo
 --    forever updateRedis
 
 runMessageSource :: String -> MVar LTS.Lts -> Chan S.ByteString -> IO ()
 runMessageSource serverId lts chan = do
-     msgStr <- convertMessage <$> composeMessage lts serverId
+     msgStr <- encodeMessage <$> composeMessage lts serverId
      writeChan chan msgStr
      liftIO $ threadDelay 1000000
 
@@ -57,3 +59,13 @@ composeMessage lts pid = do
     let ts = LTS.peek updatedLtsVal
     putMVar lts updatedLtsVal
     return $ Message pid (show ts) Request
+
+processInputMessages :: String -> MVar LTS.Lts -> Chan S.ByteString -> Chan S.ByteString -> IO ()
+processInputMessages serverId lts inChan outChan = forever $ do
+    msgStr <- readChan inChan
+    let msg = decodeMessage msgStr
+    print msg
+    -- case msg of 
+    --     Just m -> writeChan outChan $ encodeMessage m 
+    --     Nothing -> error "Cannot decode input message."
+   
