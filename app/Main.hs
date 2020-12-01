@@ -66,13 +66,16 @@ processInputMessages :: String -> MVar LTS.Lts -> Chan S.ByteString -> Chan S.By
 processInputMessages serverId lts inChan outChan = forever $ do
     msgStr <- readChan inChan
     let msg = decodeMessage msgStr
-    case msg of 
-        Just m -> do
+    maybe printErr handleMsg msg
+      where
+        handleMsg m = do
             print m
             case msgType m of 
-                Request   -> writeChan outChan . encodeMessage =<< composeMessage lts serverId (Just(timestamp m)) Reply
-                Reply     -> writeChan outChan . encodeMessage =<< composeMessage lts serverId (Just(timestamp m)) Release
+                Request   -> sendMsg Reply
+                Reply     -> sendMsg Release
                 _         -> return () 
-        Nothing -> print "Corrupted message detected."
+              where 
+                sendMsg t = writeChan outChan . encodeMessage =<< composeMessage lts serverId (Just(timestamp m)) t
+        printErr = print "Corrupted message detected."
       
    
