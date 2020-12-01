@@ -51,22 +51,16 @@ runMessageSource serverId lts chan = do
      writeChan chan msgStr
      liftIO $ threadDelay 3000000
 
-composeReplyMessage :: MVar LTS.Lts -> String -> Integer -> IO Message
-composeReplyMessage lts pid msgTs = do
-    ltsVal <- takeMVar lts
-    let updatedLtsVal = LTS.touch ltsVal
-    let updatedLtsVal = LTS.update ltsVal $ LTS.create msgTs
-    let ts = LTS.peek updatedLtsVal
-    putMVar lts updatedLtsVal
-    return $ Message pid ts Reply
-
 composeRequestMessage :: MVar LTS.Lts -> String -> IO Message
-composeRequestMessage lts pid = do
+composeRequestMessage lts pid = composeMessage lts pid Nothing Request
+
+composeMessage :: MVar LTS.Lts -> String -> Maybe Integer -> Type -> IO Message
+composeMessage lts pid msgTs msgType = do
     ltsVal <- takeMVar lts
-    let updatedLtsVal = LTS.touch ltsVal
+    let updatedLtsVal = maybe (LTS.touch ltsVal) (LTS.update ltsVal . LTS.create) msgTs
     let ts = LTS.peek updatedLtsVal
     putMVar lts updatedLtsVal
-    return $ Message pid ts Request
+    return $ Message pid ts msgType
 
 processInputMessages :: String -> MVar LTS.Lts -> Chan S.ByteString -> Chan S.ByteString -> IO ()
 processInputMessages serverId lts inChan outChan = forever $ do
@@ -76,7 +70,9 @@ processInputMessages serverId lts inChan outChan = forever $ do
         Just m -> do
             print m
             case msgType m of 
-                Request   -> writeChan outChan . encodeMessage =<< composeReplyMessage lts serverId (timestamp m)
+                Request   -> writeChan outChan . encodeMessage =<< composeMessage lts serverId (Just(timestamp m)) Reply
+                Reply     -> writeChan outChan . encodeMessage =<< composeMessage lts serverId (Just(timestamp m)) Release
                 _         -> return () 
-        Nothing -> print "Corrupted message detected." -- TODO: Implement message separation
+        Nothing -> print "Corrupted message detected."
+      
    

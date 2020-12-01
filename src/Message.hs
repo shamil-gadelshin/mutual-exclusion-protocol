@@ -17,9 +17,6 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString
 import qualified Data.ByteString.Lazy as LBS
 
-getSampleMessage :: ByteString
-getSampleMessage =  LBS.toStrict $ encodePretty $ Message "Server1" 10 Request
-
 encodeMessage :: Message -> ByteString
 encodeMessage =  LBS.toStrict . encodePretty
 
