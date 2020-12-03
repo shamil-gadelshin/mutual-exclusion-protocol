@@ -5,11 +5,14 @@ import Control.Monad.Trans
 import Control.Concurrent
 import Control.Concurrent.MVar
 import Control.Concurrent.Chan
-import Text.Printf
+import Text.Printf   
+import Data.UUID
+import System.Random
 
 import qualified Data.Text.IO as T
 import qualified Control.Exception as E
 import qualified Data.ByteString as S
+import qualified Data.PQueue.Prio.Min as MQ
 
 import Message;
 import RedisManager;
@@ -52,15 +55,16 @@ runMessageSource serverId lts chan = do
      liftIO $ threadDelay 3000000
 
 composeRequestMessage :: MVar LTS.Lts -> String -> IO Message
-composeRequestMessage lts pid = composeMessage lts pid Nothing Request
+composeRequestMessage lts pid = composeMessage Nothing lts pid Nothing Request
 
-composeMessage :: MVar LTS.Lts -> String -> Maybe Integer -> Type -> IO Message
-composeMessage lts pid msgTs msgType = do
+composeMessage :: Maybe String -> MVar LTS.Lts -> String -> Maybe Integer -> Type -> IO Message
+composeMessage sourceRequestId lts pid msgTs msgType = do
     ltsVal <- takeMVar lts
     let updatedLtsVal = maybe (LTS.touch ltsVal) (LTS.update ltsVal . LTS.create) msgTs
     let ts = LTS.peek updatedLtsVal
     putMVar lts updatedLtsVal
-    return $ Message pid ts msgType
+    uuid <- newUUID
+    return $ Message uuid ts msgType pid sourceRequestId
 
 processInputMessages :: String -> MVar LTS.Lts -> Chan S.ByteString -> Chan S.ByteString -> IO ()
 processInputMessages serverId lts inChan outChan = forever $ do
@@ -71,11 +75,13 @@ processInputMessages serverId lts inChan outChan = forever $ do
         handleMsg m = do
             print m
             case msgType m of 
-                Request   -> sendMsg Reply
-                Reply     -> sendMsg Release
+                Request   -> sendMsg Reply $ Just (msgId m)
+                Reply     -> sendMsg Release (requestId m)
                 _         -> return () 
               where 
-                sendMsg t = writeChan outChan . encodeMessage =<< composeMessage lts serverId (Just(timestamp m)) t
+                sendMsg t rId = writeChan outChan . encodeMessage =<< composeMessage rId lts serverId (Just(timestamp m)) t
         printErr = print "Corrupted message detected."
       
-   
+
+newUUID :: IO String
+newUUID = toString <$> randomIO

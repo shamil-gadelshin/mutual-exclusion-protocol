@@ -27,21 +27,28 @@ data Type = Request | Reply | Release deriving (Show, Generic)
 instance FromJSON Type
 instance ToJSON Type
 
-data Message = Message { id :: String
+data Message = Message { msgId     :: String
                        , timestamp :: Integer
-                       , msgType :: Type
+                       , msgType   :: Type
+                       , serverId  :: String
+                       , requestId :: Maybe String -- source request id
                        } deriving (Show)
 
 -- Tell Aeson how to create an Message object from JSON string.
 instance FromJSON Message where
      parseJSON (Object v) = Message <$>
-                            v .:  "id"  <*>
+                            v .:  "msgId"  <*>
                             v .:  "timestamp" <*>
-                            v .:  "msgType"
+                            v .:  "msgType" <*>
+                            v .:  "serverId" <*>
+                            v .:  "requestId"
 
 -- Tell Aeson how to convert an Message object to a JSON string.
 instance ToJSON Message where
-     toJSON (Message id timestamp msgType) =
-         object [ "id" .= id
+     toJSON (Message msgId timestamp msgType serverId requestId) =
+         object [ "msgId" .= msgId
                 , "timestamp" .= timestamp
-                , "msgType" .= msgType]
+                , "msgType" .= msgType 
+                , "serverId" .= serverId 
+                , "requestId" .= requestId 
+                ]
