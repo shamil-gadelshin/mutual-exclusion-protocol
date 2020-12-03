@@ -24,16 +24,20 @@ import qualified LTS;
     -- add config from json for remote servers
     -- add distributed process transport
     -- add file as protected resource
+    -- add formatting
+    -- add linting
 
 -- Done:
     -- add composed message
     -- catch 'not connected exception' for tcp client
     -- add lamport timestamps
 
+type MessagePriorityQueue = MQ.MinPQueue Integer Message
 
 main :: IO ()
 main = do
- --   print $ S.breakSubstring "####" "{\n    \"id\": \"server2\",\n    \"timestamp\": \"2\",\n    \"msgType\": \"Request\"\n}####"
+    let mqVal = MQ.empty
+    mq <- newMVar mqVal
     let ltsVal = LTS.new
     lts <- newMVar ltsVal
     config <- getConfiguration
@@ -42,7 +46,7 @@ main = do
     inChan <- newChan
     forkIO $ runServer (local_port config) inChan
     forkIO $ runClient (remote_port config) outChan 
-    forkIO $ processInputMessages (pid config) lts inChan outChan
+    forkIO $ processInputMessages mq (pid config) lts inChan outChan
     forever $ runMessageSource (pid config) lts outChan
      
 --    forever getRedisInfo
@@ -66,8 +70,8 @@ composeMessage sourceRequestId lts pid msgTs msgType = do
     uuid <- newUUID
     return $ Message uuid ts msgType pid sourceRequestId
 
-processInputMessages :: String -> MVar LTS.Lts -> Chan S.ByteString -> Chan S.ByteString -> IO ()
-processInputMessages serverId lts inChan outChan = forever $ do
+processInputMessages :: MVar MessagePriorityQueue -> String -> MVar LTS.Lts -> Chan S.ByteString -> Chan S.ByteString -> IO ()
+processInputMessages mq serverId lts inChan outChan = forever $ do
     msgStr <- readChan inChan
     let msg = decodeMessage msgStr
     maybe printErr handleMsg msg
@@ -75,7 +79,12 @@ processInputMessages serverId lts inChan outChan = forever $ do
         handleMsg m = do
             print m
             case msgType m of 
-                Request   -> sendMsg Reply $ Just (msgId m)
+                Request   -> do
+                    mqVal <- takeMVar mq
+                    let mqVal' = MQ.insert (timestamp m) m mqVal
+                    putMVar mq mqVal'
+                    print mqVal'
+                    sendMsg Reply $ Just (msgId m)
                 Reply     -> sendMsg Release (requestId m)
                 _         -> return () 
               where 
