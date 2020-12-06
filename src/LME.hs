@@ -4,6 +4,8 @@
 module LME
     ( new
     , request
+    , processInputMessage
+    , Lme
     ) where
 
 import Control.Concurrent.MVar
@@ -46,8 +48,8 @@ composeMessage lmeBoxed sourceRequestId msgTs msgType = do
 newUUID :: IO String
 newUUID = toString <$> randomIO
 
-processInputMessages :: Lme -> M.Message -> IO (Maybe M.Message)
-processInputMessages lmeBoxed msg = do
+processInputMessage :: Lme -> M.Message -> IO (Maybe M.Message)
+processInputMessage lmeBoxed msg = do
     case M.msgType msg of 
         M.Request -> do
             lme <- takeMVar lmeBoxed
