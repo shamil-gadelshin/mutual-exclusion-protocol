@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 23848725317f5446aa3cebb439dfaa5d1b901c4a4daf5d66febcb8f2b94ceb6a
+-- hash: 9270f6abf0c9184e4673a74f67da4756ba35364a3fa010f694403cfdc5ada03e
 
 name:           redisClient
 version:        0.1.0.0
@@ -46,6 +46,7 @@ library
     , cmdargs
     , either
     , hedis
+    , lens
     , mtl
     , network
     , pqueue
@@ -71,6 +72,7 @@ executable redisClient-exe
     , cmdargs
     , either
     , hedis
+    , lens
     , mtl
     , network
     , pqueue
@@ -98,6 +100,7 @@ test-suite redisClient-test
     , cmdargs
     , either
     , hedis
+    , lens
     , mtl
     , network
     , pqueue

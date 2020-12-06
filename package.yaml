@@ -35,6 +35,7 @@ dependencies:
 - pqueue
 - uuid
 - random
+- lens
 
 library:
   source-dirs: src

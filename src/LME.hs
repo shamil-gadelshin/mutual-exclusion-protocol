@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Lamport mutual exclusion algorithm module
 --   https://en.wikipedia.org/wiki/Lamport%27s_distributed_mutual_exclusion_algorithm
 
@@ -11,6 +13,8 @@ module LME
 import Control.Concurrent.MVar
 import Data.UUID
 import System.Random
+import Control.Lens
+import Control.Lens.Prism
 import qualified Data.PQueue.Prio.Min as MQ
 
 import qualified Message as M;
@@ -22,10 +26,12 @@ type MessagePriorityQueue = MQ.MinPQueue Integer M.Message
 type Lme = MVar LamportMutualExclusion
 
 data LamportMutualExclusion = LamportMutualExclusion
-    { lts      :: LTS.Lts
+    { _lts      :: LTS.Lts
     , serverId :: String
-    , queue    :: MessagePriorityQueue
+    , _queue    :: MessagePriorityQueue
     } deriving (Show)
+
+$(makeLenses ''LamportMutualExclusion)
 
 new :: String -> IO Lme
 new serverId = newMVar $ LamportMutualExclusion LTS.new serverId MQ.empty
@@ -36,10 +42,10 @@ request lme = composeMessage lme Nothing Nothing M.Request
 composeMessage :: Lme -> Maybe String -> Maybe Integer -> M.Type -> IO M.Message
 composeMessage lmeBoxed sourceRequestId msgTs msgType = do
     lme <- takeMVar lmeBoxed
-    let ltsVal = lts lme
+    let ltsVal = lme ^. lts
     let lts' = maybe (LTS.touch ltsVal) (LTS.update ltsVal . LTS.create) msgTs
     let ts = LTS.peek lts'
-    let lme' = LamportMutualExclusion lts' (serverId lme) (queue lme) -- change to lenses
+    let lme' = (lts .~ lts') lme
     putMVar lmeBoxed lme'
     uuid <- newUUID
     return $ M.Message uuid ts msgType (serverId lme) sourceRequestId
@@ -53,9 +59,9 @@ processInputMessage lmeBoxed msg = do
     case M.msgType msg of 
         M.Request -> do
             lme <- takeMVar lmeBoxed
-            let mqVal = queue lme
+            let mqVal = lme ^. queue 
             let queue' = MQ.insert (M.timestamp msg) msg mqVal
-            let lme' = LamportMutualExclusion (lts lme) (serverId lme) queue' -- change to lenses
+            let lme' = (queue .~ queue') lme
             putMVar lmeBoxed lme'
             createMsg M.Reply (Just (M.msgId msg))
         M.Reply   -> createMsg M.Release (M.requestId msg)
