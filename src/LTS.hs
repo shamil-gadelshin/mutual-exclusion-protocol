@@ -11,7 +11,7 @@ module LTS
     ) where
 
 -- Lamport timestamp type
-newtype Lts = Lts Integer
+newtype Lts = Lts Integer deriving (Show)
 
 -- creates new timestamp with default value = 1
 new :: Lts 

@@ -15,6 +15,7 @@ import qualified Data.ByteString as S
 import qualified Data.PQueue.Prio.Min as MQ
 
 import Message;
+import LME;
 import RedisManager;
 import Config
 import TcpManager;
