@@ -31,7 +31,7 @@ import qualified LME;
 
 main :: IO ()
 main = do
-    config <- getConfiguration
+    config <- loadConfigurationFromFile
     let serverId = pid config
     lme <- LME.new $ pid config
     printf "%s started\n" serverId

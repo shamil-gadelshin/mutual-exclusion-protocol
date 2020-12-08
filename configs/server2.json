@@ -1,0 +1,5 @@
+{
+    "pid" : "server2",
+    "local_port" : "9002",
+    "remote_port" : "9001"
+}
