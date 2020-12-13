@@ -3,5 +3,8 @@
         "pid" : "server2",
         "port": "9002"
     },
-    "remote_port" : "9001"
+    "remotes" : [{
+        "pid" : "server1",
+        "port": "9001"
+    }]
 }

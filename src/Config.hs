@@ -25,7 +25,7 @@ newtype CommandLineArguments = CommandLineArguments {
                             } deriving (Show, Data, Typeable)
 
 data Configuration = Configuration { local       :: ServerCfg
-                                   , remote_port :: String
+                                   , remotes :: [ServerCfg]
                                    } deriving (Show)
 
 data ServerCfg = ServerCfg { pid         :: String
@@ -61,11 +61,11 @@ instance ToJSON ServerCfg where
 instance FromJSON Configuration where
      parseJSON (Object v) = Configuration <$>
                             v .:  "local" <*>
-                            v .:  "remote_port"
+                            v .:  "remotes"
 
 -- Tell Aeson how to convert an Configuration object to a JSON string.
 instance ToJSON Configuration where
-     toJSON (Configuration local remote_port) =
+     toJSON (Configuration local remotes) =
          object [ "local" .= local 
-                , "remote_port" .= remote_port 
+                , "remotes" .= remotes 
                 ]

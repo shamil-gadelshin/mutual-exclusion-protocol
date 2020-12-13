@@ -34,12 +34,13 @@ main = do
     config <- loadConfigurationFromFile
     let serverId = pid $ local config
     let local_port = port $ local config
+    let remote_port = port $ head $ remotes config
     lme <- LME.new serverId
     printf "%s started\n" serverId
     outChan <- newChan
     inChan <- newChan
     forkIO $ runServer local_port inChan
-    forkIO $ runClient (remote_port config) outChan 
+    forkIO $ runClient remote_port outChan 
     forkIO $ processInputMessages lme inChan outChan
     forever $ runMessageSource lme outChan
 
