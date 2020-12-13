@@ -32,12 +32,13 @@ import qualified LME;
 main :: IO ()
 main = do
     config <- loadConfigurationFromFile
-    let serverId = pid config
-    lme <- LME.new $ pid config
+    let serverId = pid $ local config
+    let local_port = port $ local config
+    lme <- LME.new serverId
     printf "%s started\n" serverId
     outChan <- newChan
     inChan <- newChan
-    forkIO $ runServer (local_port config) inChan
+    forkIO $ runServer local_port inChan
     forkIO $ runClient (remote_port config) outChan 
     forkIO $ processInputMessages lme inChan outChan
     forever $ runMessageSource lme outChan

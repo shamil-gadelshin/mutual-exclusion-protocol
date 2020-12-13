@@ -1,5 +1,7 @@
 {
-    "pid" : "server1",
-    "local_port" : "9001",
+    "local" : {
+        "pid" : "server1",
+        "port": "9001"
+    },
     "remote_port" : "9002"
 }
