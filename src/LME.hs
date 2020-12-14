@@ -68,3 +68,4 @@ processInputMessage lmeBoxed msg = do
         _         -> return Nothing 
         where 
             createMsg t rid = Just <$> composeMessage lmeBoxed rid (Just(M.timestamp msg)) t
+

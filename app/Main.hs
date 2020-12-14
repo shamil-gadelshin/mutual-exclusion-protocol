@@ -11,6 +11,7 @@ import qualified Data.Text.IO as T
 import qualified Data.ByteString as S
 
 import Message;
+import MessageBroker;
 import RedisManager;
 import Config
 import TcpManager;
@@ -39,26 +40,26 @@ main = do
     printf "%s started\n" serverId
     outChan <- newChan
     inChan <- newChan
+    let broker = MessageBroker inChan [outChan]
     forkIO $ runServer local_port inChan
     forkIO $ runClient remote_port outChan 
-    forkIO $ processInputMessages lme inChan outChan
-    forever $ runMessageSource lme outChan
+    forkIO $ processInputMessages lme broker
+    forever $ runMessageSource lme broker
 
             
      
 --    forever getRedisInfo
 --    forever updateRedis
 
-runMessageSource :: LME.Lme -> Chan S.ByteString -> IO ()
-runMessageSource lme chan = do
-     msgStr <- encodeMessage <$> LME.request lme
-     writeChan chan msgStr
+runMessageSource :: (Broker br) => LME.Lme -> br -> IO ()
+runMessageSource lme broker = do
+     reqMsg <- LME.request lme
+     broadcast broker reqMsg
      liftIO $ threadDelay 3000000
 
-processInputMessages :: LME.Lme -> Chan S.ByteString -> Chan S.ByteString -> IO ()
-processInputMessages lme inChan outChan = forever $ do
-    msgStr <- readChan inChan
-    let msg = decodeMessage msgStr
+processInputMessages :: (Broker br) => LME.Lme -> br -> IO ()
+processInputMessages lme br = forever $ do
+    msg <- receive br
     maybe printErr handleMsg msg
       where
         handleMsg m = do
@@ -66,5 +67,6 @@ processInputMessages lme inChan outChan = forever $ do
             newMsg <- LME.processInputMessage lme m
             forM_ newMsg sendMsg
               where 
-                sendMsg msg' = writeChan outChan $ encodeMessage msg'
+                sendMsg msg' = send br "" msg'
         printErr = print "Corrupted message detected."
+
