@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 6240592e0aaeedcb48c5336825f59920b006ecbbd54539841f156f72d7579331
+-- hash: 0e25afa8d4d0db4106ee5e1ecb13f74b8a098b70dc1a170810da06a866adbb9d
 
 name:           redisClient
 version:        0.1.0.0
@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Config
+      CriticalSection
       LME
       LTS
       Message
