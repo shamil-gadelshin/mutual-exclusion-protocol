@@ -13,6 +13,7 @@ module LME
 import Control.Concurrent.MVar
 import Control.Monad
 import Data.UUID
+import qualified Data.HashMap.Strict as HM;
 import System.Random
 import Control.Lens
 import Control.Lens.Prism
@@ -26,30 +27,36 @@ import qualified LTS;
 
 type MessagePriorityQueue = MQ.MinPQueue Integer M.Message
 
-data Lme b = Lme { boxed  :: MVar LamportMutualExclusion
-                 , broker :: b
-                 }
+data Lme b cs = Lme { boxed  :: MVar (LamportMutualExclusion cs)
+                    , broker :: b
+                    }
     
 
-data LamportMutualExclusion = LamportMutualExclusion
+data LamportMutualExclusion cs = LamportMutualExclusion
     { _lts      :: LTS.Lts
     , serverId  :: String
     , _queue    :: MessagePriorityQueue
+    , _hashMap   :: HM.HashMap String cs
     } deriving (Show)
 
 $(makeLenses ''LamportMutualExclusion)
 
-new :: (Broker br) => String -> br -> IO (Lme br)
+new :: (Broker br, CS.CriticalSection cs) => String -> br -> IO (Lme br cs)
 new serverId b = do
-    lme <- newMVar $ LamportMutualExclusion LTS.new serverId MQ.empty 
+    lme <- newMVar $ LamportMutualExclusion LTS.new serverId MQ.empty HM.empty
     return $ Lme lme b
  
-request :: (Broker br) => CS.CriticalSection cs => Lme br -> cs -> IO ()
-request lmeObj _ = do --TODO implement critical section part
+request :: (Broker br, CS.CriticalSection cs) => Lme br cs -> cs -> IO ()
+request lmeObj critSect = do
     msg <- composeMessage lmeObj Nothing Nothing M.Request
+    lme <- takeMVar $ boxed lmeObj
+    let hashMap' = HM.insert (M.msgId msg) critSect (lme ^. hashMap) 
+    let lme' = (hashMap .~ hashMap') lme
+    putMVar (boxed lmeObj) lme'
     broadcast (broker lmeObj) msg
 
-composeMessage :: (Broker br) => Lme br -> Maybe String -> Maybe Integer -> M.Type -> IO M.Message
+-- TODO: optimize boxing unboxing of MVar
+composeMessage :: (Broker br, CS.CriticalSection cs) => Lme br cs-> Maybe String -> Maybe Integer -> M.Type -> IO M.Message
 composeMessage lmeObj sourceRequestId msgTs msgType = do
     lme <- takeMVar $ boxed lmeObj
     let ltsVal = lme ^. lts
@@ -64,7 +71,7 @@ composeMessage lmeObj sourceRequestId msgTs msgType = do
 newUUID :: IO String
 newUUID = toString <$> randomIO
 
-handleMessage :: (Broker br) => Lme br -> M.Message -> IO (Maybe M.Message)
+handleMessage :: (Broker br, CS.CriticalSection cs) => Lme br cs-> M.Message -> IO (Maybe M.Message)
 handleMessage lmeObj msg = do
     case M.msgType msg of 
         M.Request -> do
@@ -79,7 +86,7 @@ handleMessage lmeObj msg = do
         where 
             createMsg t rid = Just <$> composeMessage lmeObj rid (Just(M.timestamp msg)) t
 
-processInputMessage :: (Broker br) => Lme br -> IO ()
+processInputMessage :: (Broker br, CS.CriticalSection cs) => Lme br cs-> IO ()
 processInputMessage lmeObj = do
     let br = broker lmeObj
     msg <- receive br

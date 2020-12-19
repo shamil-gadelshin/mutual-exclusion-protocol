@@ -73,8 +73,8 @@ main = do
 --    forever getRedisInfo
 --    forever updateRedis
 
-runMessageSource :: (Broker br) => LME.Lme br -> IO ()
+runMessageSource :: (Broker br) => LME.Lme br CS.DummyResource -> IO ()
 runMessageSource lme = do
-     LME.request lme (CS.DummyResource "Dummy")
+     LME.request lme $ CS.DummyResource "Dummy"
      liftIO $ threadDelay 3000000
 

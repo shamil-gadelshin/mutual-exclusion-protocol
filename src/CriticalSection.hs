@@ -4,7 +4,7 @@ module CriticalSection
     ) where
 
 -- The CriticalSection class represents a resource that need protection.
-class CriticalSection a  where
+class Show a => CriticalSection a  where
     -- Access the protected resource and/or execute an action on it.
     execute   :: a -> IO ()
 
