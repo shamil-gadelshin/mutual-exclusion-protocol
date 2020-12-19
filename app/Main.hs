@@ -2,6 +2,7 @@
 
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.Zip
 import Control.Concurrent
 import Control.Concurrent.Chan
 import Data.Foldable
@@ -46,22 +47,31 @@ main = do
     -- get configuration
     config <- loadConfigurationFromFile
     let serverId = pid $ local config
-    let local_port = port $ local config
-    let remote_port = port $ head $ remotes config
+    let localPort = port $ local config
+    let remoteServers = remotes config
     printf "%s started\n" serverId
 
     -- construct the message transport
-    outChan <- newChan
+    outChans <- mapM (const newChan) remoteServers
+
+    let processIds = mapM pid remoteServers
+    let namedChans = mzip processIds outChans
     inChan <- newChan
-    let broker = MessageBroker inChan [outChan]
+    let broker = MessageBroker inChan namedChans
 
     -- initialize the main algorithm
     lme <- LME.new serverId broker
 
     -- setup working threads
         -- fork threads for message transport
-    forkIO $ runServer local_port inChan
-    forkIO $ runClient remote_port outChan 
+            -- setup server thread
+    forkIO $ runServer localPort inChan
+
+            -- setup client threads
+    let remotePorts = map port remoteServers
+    let portsAndChans = mzip remotePorts outChans
+    mapM_ (\(port, chan) -> forkIO $ runClient port chan) portsAndChans
+
         -- fork algorithm working thread
     forkIO $ forever $ LME.processInputMessage lme
 

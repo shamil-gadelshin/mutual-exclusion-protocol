@@ -30,13 +30,12 @@ type MessagePriorityQueue = MQ.MinPQueue Integer M.Message
 data Lme b cs = Lme { boxed  :: MVar (LamportMutualExclusion cs)
                     , broker :: b
                     }
-    
 
 data LamportMutualExclusion cs = LamportMutualExclusion
-    { _lts      :: LTS.Lts
-    , serverId  :: String
-    , _queue    :: MessagePriorityQueue
-    , _hashMap   :: HM.HashMap String cs
+    { _lts       :: LTS.Lts
+    , serverId   :: String
+    , _queue     :: MessagePriorityQueue
+    , _resources :: HM.HashMap String cs
     } deriving (Show)
 
 $(makeLenses ''LamportMutualExclusion)
@@ -50,8 +49,8 @@ request :: (Broker br, CS.CriticalSection cs) => Lme br cs -> cs -> IO ()
 request lmeObj critSect = do
     msg <- composeMessage lmeObj Nothing Nothing M.Request
     lme <- takeMVar $ boxed lmeObj
-    let hashMap' = HM.insert (M.msgId msg) critSect (lme ^. hashMap) 
-    let lme' = (hashMap .~ hashMap') lme
+    let resources' = HM.insert (M.msgId msg) critSect (lme ^. resources) 
+    let lme' = (resources .~ resources') lme
     putMVar (boxed lmeObj) lme'
     broadcast (broker lmeObj) msg
 
@@ -66,7 +65,6 @@ composeMessage lmeObj sourceRequestId msgTs msgType = do
     putMVar (boxed lmeObj) lme'
     uuid <- newUUID
     return $ M.Message uuid ts msgType (serverId lme) sourceRequestId
-
 
 newUUID :: IO String
 newUUID = toString <$> randomIO

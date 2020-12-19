@@ -18,12 +18,12 @@ class Broker a  where
 
 -- Message broker implementation based on syncrhonous channels. 
 data MessageBroker = MessageBroker { inChan   :: Chan S.ByteString 
-                                   , outChans :: [Chan S.ByteString] 
+                                   , outChans :: [(String, Chan S.ByteString)] 
                                    }
 
 instance Broker MessageBroker where
     receive broker = do
         let msgStr = readChan $ inChan broker
         decodeMessage <$> msgStr
-    send broker _ msg = writeChan (head $ outChans broker) (encodeMessage msg)
+    send broker _ msg = writeChan (snd . head $ outChans broker) (encodeMessage msg)
     broadcast broker msg = send broker "" msg 
