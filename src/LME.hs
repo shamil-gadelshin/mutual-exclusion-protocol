@@ -13,6 +13,7 @@ module LME
 import Control.Concurrent.MVar
 import Control.Monad
 import Data.UUID
+import Data.Maybe
 import qualified Data.HashMap.Strict as HM;
 import System.Random
 import Control.Lens
@@ -21,12 +22,13 @@ import qualified Data.PQueue.Prio.Min as MQ
 
 import qualified Message as M;
 import qualified CriticalSection as CS;
-import MessageBroker;
+import qualified MessageBroker as MB;
 import qualified LTS;
 
 
 type MessagePriorityQueue = MQ.MinPQueue Integer M.Message
 
+-- TODO: gadt 
 data Lme b cs = Lme { boxed  :: MVar (LamportMutualExclusion cs)
                     , broker :: b
                     }
@@ -40,22 +42,22 @@ data LamportMutualExclusion cs = LamportMutualExclusion
 
 $(makeLenses ''LamportMutualExclusion)
 
-new :: (Broker br, CS.CriticalSection cs) => String -> br -> IO (Lme br cs)
+new :: (MB.Broker br, CS.CriticalSection cs) => String -> br -> IO (Lme br cs)
 new serverId b = do
     lme <- newMVar $ LamportMutualExclusion LTS.new serverId MQ.empty HM.empty
     return $ Lme lme b
  
-request :: (Broker br, CS.CriticalSection cs) => Lme br cs -> cs -> IO ()
+request :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs -> cs -> IO ()
 request lmeObj critSect = do
     msg <- composeMessage lmeObj Nothing Nothing M.Request
     lme <- takeMVar $ boxed lmeObj
     let resources' = HM.insert (M.msgId msg) critSect (lme ^. resources) 
     let lme' = (resources .~ resources') lme
     putMVar (boxed lmeObj) lme'
-    broadcast (broker lmeObj) msg
+    MB.broadcast (broker lmeObj) msg
 
 -- TODO: optimize boxing unboxing of MVar
-composeMessage :: (Broker br, CS.CriticalSection cs) => Lme br cs-> Maybe String -> Maybe Integer -> M.Type -> IO M.Message
+composeMessage :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> Maybe String -> Maybe Integer -> M.Type -> IO M.Message
 composeMessage lmeObj sourceRequestId msgTs msgType = do
     lme <- takeMVar $ boxed lmeObj
     let ltsVal = lme ^. lts
@@ -69,7 +71,7 @@ composeMessage lmeObj sourceRequestId msgTs msgType = do
 newUUID :: IO String
 newUUID = toString <$> randomIO
 
-handleMessage :: (Broker br, CS.CriticalSection cs) => Lme br cs-> M.Message -> IO (Maybe M.Message)
+handleMessage :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> M.Message -> IO (Maybe M.Message)
 handleMessage lmeObj msg = do
     case M.msgType msg of 
         M.Request -> do
@@ -84,15 +86,19 @@ handleMessage lmeObj msg = do
         where 
             createMsg t rid = Just <$> composeMessage lmeObj rid (Just(M.timestamp msg)) t
 
-processInputMessage :: (Broker br, CS.CriticalSection cs) => Lme br cs-> IO ()
+processInputMessage :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> IO ()
 processInputMessage lmeObj = do
     let br = broker lmeObj
-    msg <- receive br
+    msg <- MB.receive br
     maybe printErr handleMsg msg
       where
         handleMsg m = do
             print m
             newMsg <- handleMessage lmeObj m
-            forM_ newMsg $ sendMsg (broker lmeObj) -- TODO send or broadcast message based on type
+            forM_ newMsg $ sendMsg (broker lmeObj) (M.serverId m) 
         printErr = print "Corrupted message detected."
-        sendMsg br msg' = send br "" msg' --TODO
+        sendMsg br inputServerId msg' = do
+            case M.msgType msg' of 
+                 M.Reply   -> MB.send br inputServerId msg'
+                 M.Release -> MB.broadcast br msg'
+                 _         -> return ()

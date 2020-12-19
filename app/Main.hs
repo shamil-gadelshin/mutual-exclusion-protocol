@@ -12,7 +12,7 @@ import qualified Data.Text.IO as T
 import qualified Data.ByteString as S
 
 import Message;
-import MessageBroker;
+import qualified MessageBroker as MB;
 import qualified CriticalSection as CS;
 import RedisManager;
 import Config
@@ -54,10 +54,11 @@ main = do
     -- construct the message transport
     outChans <- mapM (const newChan) remoteServers
 
-    let processIds = mapM pid remoteServers
+    let processIds = map pid remoteServers
+    print processIds
     let namedChans = mzip processIds outChans
     inChan <- newChan
-    let broker = MessageBroker inChan namedChans
+    let broker = MB.new inChan namedChans
 
     -- initialize the main algorithm
     lme <- LME.new serverId broker
@@ -83,7 +84,7 @@ main = do
 --    forever getRedisInfo
 --    forever updateRedis
 
-runMessageSource :: (Broker br) => LME.Lme br CS.DummyResource -> IO ()
+runMessageSource :: (MB.Broker br) => LME.Lme br CS.DummyResource -> IO ()
 runMessageSource lme = do
      LME.request lme $ CS.DummyResource "Dummy"
      liftIO $ threadDelay 3000000
