@@ -38,13 +38,17 @@ data LamportMutualExclusion cs = LamportMutualExclusion
     , serverId   :: String
     , _queue     :: MessagePriorityQueue
     , _resources :: HM.HashMap String cs
+    -- Replies = map (requestId map (serverId replied flag))
+    -- Collects responses from other servers for local requests
+    -- TODO create separate object with handling methods
+    , _replies   :: HM.HashMap String (HM.HashMap String Bool)
     } deriving (Show)
 
 $(makeLenses ''LamportMutualExclusion)
 
 new :: (MB.Broker br, CS.CriticalSection cs) => String -> br -> IO (Lme br cs)
 new serverId b = do
-    lme <- newMVar $ LamportMutualExclusion LTS.new serverId MQ.empty HM.empty
+    lme <- newMVar $ LamportMutualExclusion LTS.new serverId MQ.empty HM.empty HM.empty
     return $ Lme lme b
  
 request :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs -> cs -> IO ()
@@ -52,7 +56,10 @@ request lmeObj critSect = do
     msg <- composeMessage lmeObj Nothing Nothing M.Request
     lme <- takeMVar $ boxed lmeObj
     let resources' = HM.insert (M.msgId msg) critSect (lme ^. resources) 
-    let lme' = (resources .~ resources') lme
+    -- TODO extract separate function
+    let replies' = HM.insert (M.msgId msg) (HM.fromList $ zip (MB.peers $ broker lmeObj) (repeat False)) (lme ^. replies) 
+    let lme' = (resources .~ resources') . (replies .~ replies') $ lme
+    print replies'
     putMVar (boxed lmeObj) lme'
     MB.broadcast (broker lmeObj) msg
 
@@ -71,21 +78,48 @@ composeMessage lmeObj sourceRequestId msgTs msgType = do
 newUUID :: IO String
 newUUID = toString <$> randomIO
 
+-- TODO: move boxing-unboxing to the outer scope
 handleMessage :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> M.Message -> IO (Maybe M.Message)
 handleMessage lmeObj msg = do
     case M.msgType msg of 
         M.Request -> do
             lme <- takeMVar (boxed lmeObj)
-            let mqVal = lme ^. queue 
-            let queue' = MQ.insert (M.timestamp msg) msg mqVal
+            let queueVal = lme ^. queue 
+            let queue' = MQ.insert (M.timestamp msg) msg queueVal
             let lme' = (queue .~ queue') lme
             putMVar (boxed lmeObj) lme'
             createMsg M.Reply (Just (M.msgId msg))
-        M.Reply   -> createMsg M.Release (M.requestId msg)
-        _         -> return Nothing -- TODO remove from the queue on receiving the release
+        M.Reply   -> do 
+            lme <- takeMVar (boxed lmeObj)
+            let repliesOuterMap = lme ^. replies
+            let requestId = fromJust $ M.requestId msg
+            let repliesInnerMap = repliesOuterMap HM.! requestId
+            let replies' = HM.insert requestId (HM.insert (M.serverId msg) True repliesInnerMap) repliesOuterMap
+            let lme' = (replies .~ replies') lme
+            putMVar (boxed lmeObj) lme'
+
+            -- TODO execute critical section.
+
+            createMsg M.Release (M.requestId msg)
+        M.Release -> do
+            lme <- takeMVar (boxed lmeObj)
+            let repliesMap = lme ^. replies
+            let requestId = fromJust $ M.requestId msg
+            let replies' = HM.delete requestId repliesMap
+
+            let queueVal = lme ^. queue 
+            let ((_,firstMsg), queue') = MQ.deleteFindMin queueVal
+            when ((M.msgId firstMsg) /= requestId) 
+                (return $ error "Unexpected first message in the queue on release.")
+            
+            let lme' = (replies .~ replies') . (queue .~ queue') $ lme
+            putMVar (boxed lmeObj) lme'          
+
+            return Nothing 
         where 
             createMsg t rid = Just <$> composeMessage lmeObj rid (Just(M.timestamp msg)) t
 
+-- TODO: create separate functions for map
 processInputMessage :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> IO ()
 processInputMessage lmeObj = do
     let br = broker lmeObj

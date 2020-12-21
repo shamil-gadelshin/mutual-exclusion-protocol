@@ -17,6 +17,8 @@ class Broker a  where
     broadcast :: a -> Message -> IO ()
     -- Sends a single message to named channel.
     send      :: a -> String -> Message -> IO ()
+    -- Returns peers ids
+    peers     :: a -> [String]
 
 -- Message broker implementation based on syncrhonous channels. 
 data MessageBroker = MessageBroker { inChan   :: Chan S.ByteString 
@@ -34,3 +36,4 @@ instance Broker MessageBroker where
         let chan = outChans broker HM.! serverId
         writeChan chan (encodeMessage msg)
     broadcast broker msg = mapM_ (\pid -> send broker pid msg) (HM.keys $ outChans broker)
+    peers broker = HM.keys $ outChans broker
