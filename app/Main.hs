@@ -74,7 +74,7 @@ main = do
     mapM_ (\(port, chan) -> forkIO $ runClient port chan) portsAndChans
 
         -- fork algorithm working thread
-    forkIO $ forever $ LME.processInputMessage lme
+    forkIO $ forever $ LME.runMessagePipeline lme
 
     -- initialize task creator
     forever $ runMessageSource lme

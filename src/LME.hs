@@ -6,7 +6,7 @@
 module LME
     ( new
     , request
-    , processInputMessage
+    , runMessagePipeline
     , Lme
     ) where
 
@@ -91,28 +91,51 @@ handleMessage lmeObj msg = do
             createMsg M.Reply (Just (M.msgId msg))
         M.Reply   -> do 
             lme <- takeMVar (boxed lmeObj)
-            let repliesOuterMap = lme ^. replies
+            
+            let queueVal = lme ^. queue 
+            let (_, firstMsg) = MQ.findMin queueVal
+
             let requestId = fromJust $ M.requestId msg
+
+            let repliesOuterMap = lme ^. replies
             let repliesInnerMap = repliesOuterMap HM.! requestId
             let replies' = HM.insert requestId (HM.insert (M.serverId msg) True repliesInnerMap) repliesOuterMap
-            let lme' = (replies .~ replies') lme
-            putMVar (boxed lmeObj) lme'
 
-            -- TODO execute critical section.
+            let result = if allReplyReceived replies' requestId
+                            then do
+                                if M.msgId firstMsg == requestId
+                                then do
+                                    let queue' = MQ.deleteMin queueVal
+                                    let lme' = (replies .~ HM.delete requestId repliesOuterMap) . (queue .~ queue') $ lme
+                                    putMVar (boxed lmeObj) lme'
+                                    -- TODO execute critical section.
 
-            createMsg M.Release (M.requestId msg)
+                                    createMsg M.Release (M.requestId msg)
+                                else do
+                                    let lme' = (replies .~ replies') lme
+                                    putMVar (boxed lmeObj) lme'
+                                    return Nothing
+                                
+                                
+                            else do
+                                let lme' = (replies .~ replies') lme
+                                putMVar (boxed lmeObj) lme'
+
+                                return Nothing
+
+
+
+            result
         M.Release -> do
-            lme <- takeMVar (boxed lmeObj)
-            let repliesMap = lme ^. replies
             let requestId = fromJust $ M.requestId msg
-            let replies' = HM.delete requestId repliesMap
 
+            lme <- takeMVar (boxed lmeObj)
             let queueVal = lme ^. queue 
             let ((_,firstMsg), queue') = MQ.deleteFindMin queueVal
-            when ((M.msgId firstMsg) /= requestId) 
+            when (M.msgId firstMsg /= requestId) 
                 (return $ error "Unexpected first message in the queue on release.")
             
-            let lme' = (replies .~ replies') . (queue .~ queue') $ lme
+            let lme' = queue .~ queue' $ lme
             putMVar (boxed lmeObj) lme'          
 
             return Nothing 
@@ -120,8 +143,8 @@ handleMessage lmeObj msg = do
             createMsg t rid = Just <$> composeMessage lmeObj rid (Just(M.timestamp msg)) t
 
 -- TODO: create separate functions for map
-processInputMessage :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> IO ()
-processInputMessage lmeObj = do
+runMessagePipeline :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> IO ()
+runMessagePipeline lmeObj = do
     let br = broker lmeObj
     msg <- MB.receive br
     maybe printErr handleMsg msg
@@ -136,3 +159,10 @@ processInputMessage lmeObj = do
                  M.Reply   -> MB.send br inputServerId msg'
                  M.Release -> MB.broadcast br msg'
                  _         -> return ()
+
+
+allReplyReceived :: HM.HashMap String (HM.HashMap String Bool) -> String -> Bool
+allReplyReceived replies requestId = 
+    let peersPermissions = replies HM.! requestId in
+    let allPermissionReceived = and $ HM.elems peersPermissions
+    in allPermissionReceived
