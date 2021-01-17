@@ -55,6 +55,7 @@ new serverId b = do
     lme <- newMVar $ LamportMutualExclusion LTS.new serverId MQ.empty HM.empty (ServerReplies HM.empty)
     return $ Lme lme b
  
+ -- TODO: consider modifyMVar_
 request :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs -> cs -> IO ()
 request lmeObj critSect = do
     lme <- takeMVar $ boxed lmeObj
@@ -77,66 +78,61 @@ composeMessage lts serverId sourceRequestId msgTs msgType = do
 newUUID :: IO String
 newUUID = toString <$> randomIO
 
--- TODO: move boxing-unboxing to the outer scope
-handleMessage :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> M.Message -> IO (Maybe M.Message)
+-- TODO: consider modifyMVar_
+-- Processes the inbound message and generates outbound message in some cases 
+handleMessage :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs -> M.Message -> IO (Maybe M.Message)
 handleMessage lmeObj msg = do
-    case M.msgType msg of 
-        M.Request -> do
-            lme <- takeMVar (boxed lmeObj)
-            let queueVal = lme ^. queue 
-            let queue' = MQ.insert (M.timestamp msg) msg queueVal
+    lme <- takeMVar (boxed lmeObj)
+    (lme', msg') <- unwrappedHandleMessage lme msg
+    putMVar (boxed lmeObj) lme'
+    return msg'
+    where
+        unwrappedHandleMessage lme msg =
+            case M.msgType msg of 
+                M.Request -> do
+                    let queueVal = lme ^. queue 
+                    let queue' = MQ.insert (M.timestamp msg) msg queueVal
 
-            (msg', lts') <- composeMessage (lme ^. lts) (serverId lme) (Just (M.msgId msg)) (Just(M.timestamp msg))  M.Reply 
-            let lme' = (queue .~ queue') . (lts .~ lts') $ lme
-            putMVar (boxed lmeObj) lme'
+                    (msg', lts') <- composeMessage (lme ^. lts) (serverId lme) (Just (M.msgId msg)) (Just(M.timestamp msg))  M.Reply 
+                    let lme' = (queue .~ queue') . (lts .~ lts') $ lme
 
-            return $ Just msg'
-        M.Reply   -> do 
-            lme <- takeMVar (boxed lmeObj)
-            
-            let queueVal = lme ^. queue 
-            let (_, firstMsg) = MQ.findMin queueVal
+                    return (lme', Just msg')
+                M.Reply   -> do 
+                    let queueVal = lme ^. queue 
+                    let (_, firstMsg) = MQ.findMin queueVal
 
-            let requestId = fromJust $ M.requestId msg
+                    let requestId = fromJust $ M.requestId msg
 
-            let replies' = registerServerReply (lme ^. replies) requestId (M.serverId msg)
+                    let replies' = registerServerReply (lme ^. replies) requestId (M.serverId msg)
 
-            let result = if allReplyReceived replies' requestId
+                    if allReplyReceived replies' requestId
+                        then do
+                            if M.msgId firstMsg == requestId
                             then do
-                                if M.msgId firstMsg == requestId
-                                then do
-                                    let queue' = MQ.deleteMin queueVal
-                                    
-                                    
-                                    -- TODO execute critical section.
-                                    (msg', lts') <- composeMessage (lme ^. lts) (serverId lme) (M.requestId msg) (Just(M.timestamp msg)) M.Release 
-                                    let lme' = (replies .~ (removeServerReplyEntry replies' requestId)) . (queue .~ queue') . (lts .~ lts') $ lme
-                                    putMVar (boxed lmeObj) lme'
+                                let queue' = MQ.deleteMin queueVal
+                                
+                                -- TODO execute critical section.
+                                (msg', lts') <- composeMessage (lme ^. lts) (serverId lme) (M.requestId msg) (Just(M.timestamp msg)) M.Release 
+                                let lme' = (replies .~ (removeServerReplyEntry replies' requestId)) . (queue .~ queue') . (lts .~ lts') $ lme
 
-                                    return $ Just msg'
-                                else do
-                                    let lme' = (replies .~ replies') lme
-                                    putMVar (boxed lmeObj) lme'
-                                    return Nothing
+                                return (lme', Just msg')
                             else do
                                 let lme' = (replies .~ replies') lme
-                                putMVar (boxed lmeObj) lme'
-                                return Nothing
+                                return (lme',  Nothing)
+                        else do
+                            let lme' = (replies .~ replies') lme
+                            return (lme',  Nothing)
 
-            result
-        M.Release -> do
-            let requestId = fromJust $ M.requestId msg
+                M.Release -> do
+                    let requestId = fromJust $ M.requestId msg
+                    let queueVal = lme ^. queue 
+                    let ((_,firstMsg), queue') = MQ.deleteFindMin queueVal
+                    when (M.msgId firstMsg /= requestId) 
+                        (return $ error "Unexpected first message in the queue on release.")
+                    
+                    let lme' = queue .~ queue' $ lme
 
-            lme <- takeMVar (boxed lmeObj)
-            let queueVal = lme ^. queue 
-            let ((_,firstMsg), queue') = MQ.deleteFindMin queueVal
-            when (M.msgId firstMsg /= requestId) 
-                (return $ error "Unexpected first message in the queue on release.")
-            
-            let lme' = queue .~ queue' $ lme
-            putMVar (boxed lmeObj) lme'          
-
-            return Nothing 
+                    return (lme',  Nothing)
 
 
 runMessagePipeline :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> IO ()
