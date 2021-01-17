@@ -33,22 +33,26 @@ data Lme b cs = Lme { boxed  :: MVar (LamportMutualExclusion cs)
                     , broker :: b
                     }
 
+-- Collects replies from other servers for local requests 
+-- combined by original requests IDs
+newtype ServerReplies = ServerReplies
+    -- serverReplies = map (requestId map (serverId repliedFlag))
+    { serverReplies :: HM.HashMap String (HM.HashMap String Bool)
+    } deriving (Show)
+
 data LamportMutualExclusion cs = LamportMutualExclusion
     { _lts       :: LTS.Lts
     , serverId   :: String
     , _queue     :: MessagePriorityQueue
     , _resources :: HM.HashMap String cs
-    -- Replies = map (requestId map (serverId replied flag))
-    -- Collects responses from other servers for local requests
-    -- TODO create separate object with handling methods
-    , _replies   :: HM.HashMap String (HM.HashMap String Bool)
+    , _replies   :: ServerReplies
     } deriving (Show)
 
 $(makeLenses ''LamportMutualExclusion)
 
 new :: (MB.Broker br, CS.CriticalSection cs) => String -> br -> IO (Lme br cs)
 new serverId b = do
-    lme <- newMVar $ LamportMutualExclusion LTS.new serverId MQ.empty HM.empty HM.empty
+    lme <- newMVar $ LamportMutualExclusion LTS.new serverId MQ.empty HM.empty (ServerReplies HM.empty)
     return $ Lme lme b
  
 request :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs -> cs -> IO ()
@@ -56,8 +60,7 @@ request lmeObj critSect = do
     msg <- composeMessage lmeObj Nothing Nothing M.Request
     lme <- takeMVar $ boxed lmeObj
     let resources' = HM.insert (M.msgId msg) critSect (lme ^. resources) 
-    -- TODO extract separate function
-    let replies' = HM.insert (M.msgId msg) (HM.fromList $ zip (MB.peers $ broker lmeObj) (repeat False)) (lme ^. replies) 
+    let replies' = createEmptyServerRepliesEntry (lme ^. replies) (M.msgId msg) (MB.peers $ broker lmeObj)
     let lme' = (resources .~ resources') . (replies .~ replies') $ lme
     print replies'
     putMVar (boxed lmeObj) lme'
@@ -97,16 +100,14 @@ handleMessage lmeObj msg = do
 
             let requestId = fromJust $ M.requestId msg
 
-            let repliesOuterMap = lme ^. replies
-            let repliesInnerMap = repliesOuterMap HM.! requestId
-            let replies' = HM.insert requestId (HM.insert (M.serverId msg) True repliesInnerMap) repliesOuterMap
+            let replies' = registerServerReply (lme ^. replies) requestId (M.serverId msg)
 
             let result = if allReplyReceived replies' requestId
                             then do
                                 if M.msgId firstMsg == requestId
                                 then do
                                     let queue' = MQ.deleteMin queueVal
-                                    let lme' = (replies .~ HM.delete requestId repliesOuterMap) . (queue .~ queue') $ lme
+                                    let lme' = (replies .~ (removeServerReplyEntry replies' requestId)) . (queue .~ queue') $ lme
                                     putMVar (boxed lmeObj) lme'
                                     -- TODO execute critical section.
 
@@ -115,15 +116,10 @@ handleMessage lmeObj msg = do
                                     let lme' = (replies .~ replies') lme
                                     putMVar (boxed lmeObj) lme'
                                     return Nothing
-                                
-                                
                             else do
                                 let lme' = (replies .~ replies') lme
                                 putMVar (boxed lmeObj) lme'
-
                                 return Nothing
-
-
 
             result
         M.Release -> do
@@ -142,7 +138,6 @@ handleMessage lmeObj msg = do
         where 
             createMsg t rid = Just <$> composeMessage lmeObj rid (Just(M.timestamp msg)) t
 
--- TODO: create separate functions for map
 runMessagePipeline :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> IO ()
 runMessagePipeline lmeObj = do
     let br = broker lmeObj
@@ -160,9 +155,32 @@ runMessagePipeline lmeObj = do
                  M.Release -> MB.broadcast br msg'
                  _         -> return ()
 
+-- ServerReplies helper functions
 
-allReplyReceived :: HM.HashMap String (HM.HashMap String Bool) -> String -> Bool
-allReplyReceived replies requestId = 
+-- Creates new 'server replies' entry for the request. Fills default flag
+-- values to 'False' for known peer servers.
+createEmptyServerRepliesEntry :: ServerReplies -> String -> [String] -> ServerReplies
+createEmptyServerRepliesEntry sr msgId peers = ServerReplies $ 
+    HM.insert msgId (HM.fromList $ zip peers (repeat False)) (serverReplies sr)
+
+-- Sets 'server reply' to True
+registerServerReply :: ServerReplies -> String -> String -> ServerReplies
+registerServerReply sr requestId serverId = 
+    let repliesOuterMap = serverReplies sr in
+    let repliesInnerMap = repliesOuterMap HM.! requestId in 
+    ServerReplies $ 
+        HM.insert requestId (HM.insert serverId True repliesInnerMap) repliesOuterMap
+
+-- Looks through server replies for a given request ID. Returns true if all
+-- servers replied.
+allReplyReceived :: ServerReplies -> String -> Bool
+allReplyReceived sr requestId = 
+    let replies = serverReplies sr in
     let peersPermissions = replies HM.! requestId in
     let allPermissionReceived = and $ HM.elems peersPermissions
     in allPermissionReceived
+
+-- Deletes 'server reply' entry by the request ID.
+removeServerReplyEntry :: ServerReplies -> String -> ServerReplies
+removeServerReplyEntry sr requestId = ServerReplies $ 
+    HM.delete requestId (serverReplies sr)
