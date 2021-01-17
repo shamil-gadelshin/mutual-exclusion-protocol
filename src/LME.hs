@@ -36,7 +36,7 @@ data Lme b cs = Lme { boxed  :: MVar (LamportMutualExclusion cs)
 -- Collects replies from other servers for local requests 
 -- combined by original requests IDs
 newtype ServerReplies = ServerReplies
-    -- serverReplies = map (requestId map (serverId repliedFlag))
+    -- Pseudocode: serverReplies = map (requestId map (serverId repliedFlag))
     { serverReplies :: HM.HashMap String (HM.HashMap String Bool)
     } deriving (Show)
 
@@ -57,27 +57,23 @@ new serverId b = do
  
 request :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs -> cs -> IO ()
 request lmeObj critSect = do
-    msg <- composeMessage lmeObj Nothing Nothing M.Request
     lme <- takeMVar $ boxed lmeObj
+    (msg, lts') <- composeMessage (lme ^. lts) (serverId lme) Nothing Nothing M.Request
     let resources' = HM.insert (M.msgId msg) critSect (lme ^. resources) 
     let replies' = createEmptyServerRepliesEntry (lme ^. replies) (M.msgId msg) (MB.peers $ broker lmeObj)
-    let lme' = (resources .~ resources') . (replies .~ replies') $ lme
-    print replies'
+    let lme' = (resources .~ resources') . (replies .~ replies') . (lts .~ lts') $ lme
     putMVar (boxed lmeObj) lme'
     MB.broadcast (broker lmeObj) msg
 
 -- TODO: optimize boxing unboxing of MVar
-composeMessage :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> Maybe String -> Maybe Integer -> M.Type -> IO M.Message
-composeMessage lmeObj sourceRequestId msgTs msgType = do
-    lme <- takeMVar $ boxed lmeObj
-    let ltsVal = lme ^. lts
-    let lts' = maybe (LTS.touch ltsVal) (LTS.update ltsVal . LTS.create) msgTs
+composeMessage :: LTS.Lts -> String -> Maybe String -> Maybe Integer -> M.Type -> IO (M.Message, LTS.Lts)
+composeMessage lts serverId sourceRequestId msgTs msgType = do
+    let lts' = maybe (LTS.touch lts) (LTS.update lts . LTS.create) msgTs
     let ts = LTS.peek lts'
-    let lme' = (lts .~ lts') lme
-    putMVar (boxed lmeObj) lme'
     uuid <- newUUID
-    return $ M.Message uuid ts msgType (serverId lme) sourceRequestId
+    return (M.Message uuid ts msgType serverId sourceRequestId, lts')
 
+-- Generates random UUID
 newUUID :: IO String
 newUUID = toString <$> randomIO
 
@@ -89,9 +85,12 @@ handleMessage lmeObj msg = do
             lme <- takeMVar (boxed lmeObj)
             let queueVal = lme ^. queue 
             let queue' = MQ.insert (M.timestamp msg) msg queueVal
-            let lme' = (queue .~ queue') lme
+
+            (msg', lts') <- composeMessage (lme ^. lts) (serverId lme) (Just (M.msgId msg)) (Just(M.timestamp msg))  M.Reply 
+            let lme' = (queue .~ queue') . (lts .~ lts') $ lme
             putMVar (boxed lmeObj) lme'
-            createMsg M.Reply (Just (M.msgId msg))
+
+            return $ Just msg'
         M.Reply   -> do 
             lme <- takeMVar (boxed lmeObj)
             
@@ -107,11 +106,14 @@ handleMessage lmeObj msg = do
                                 if M.msgId firstMsg == requestId
                                 then do
                                     let queue' = MQ.deleteMin queueVal
-                                    let lme' = (replies .~ (removeServerReplyEntry replies' requestId)) . (queue .~ queue') $ lme
-                                    putMVar (boxed lmeObj) lme'
+                                    
+                                    
                                     -- TODO execute critical section.
+                                    (msg', lts') <- composeMessage (lme ^. lts) (serverId lme) (M.requestId msg) (Just(M.timestamp msg)) M.Release 
+                                    let lme' = (replies .~ (removeServerReplyEntry replies' requestId)) . (queue .~ queue') . (lts .~ lts') $ lme
+                                    putMVar (boxed lmeObj) lme'
 
-                                    createMsg M.Release (M.requestId msg)
+                                    return $ Just msg'
                                 else do
                                     let lme' = (replies .~ replies') lme
                                     putMVar (boxed lmeObj) lme'
@@ -135,8 +137,7 @@ handleMessage lmeObj msg = do
             putMVar (boxed lmeObj) lme'          
 
             return Nothing 
-        where 
-            createMsg t rid = Just <$> composeMessage lmeObj rid (Just(M.timestamp msg)) t
+
 
 runMessagePipeline :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> IO ()
 runMessagePipeline lmeObj = do
