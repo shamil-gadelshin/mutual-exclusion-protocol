@@ -19,20 +19,25 @@ import Data.Maybe
 import Control.Monad
 import qualified Data.ByteString.Lazy as LBS
 
--- stack build --exec "redisClient-exe --config=./configs/server1.json"
+-- Wrapper-type for command line arguments.
+-- Usage: stack build --exec "redisClient-exe --config=./configs/server1.json"
 newtype CommandLineArguments = CommandLineArguments {
-                                config :: String
+                                config :: String -- wrapperd config string
                             } deriving (Show, Data, Typeable)
 
-data Configuration = Configuration { local       :: ServerCfg
-                                   , remotes :: [ServerCfg]
+-- Cluster configuration
+data Configuration = Configuration { local       :: ServerCfg -- local node
+                                   , remotes :: [ServerCfg] -- remote nodes
                                    } deriving (Show)
 
-data ServerCfg = ServerCfg { pid         :: String
-                           , port  :: String
+--TODO: add domain for a distributed run.
+-- Node configuration
+data ServerCfg = ServerCfg { pid         :: String -- unique ID
+                           , port  :: String -- TCP-port for local runs
                            } deriving (Show)
 
 
+-- Loads a configuration from the provided config-file name.
 loadConfigurationFromFile :: IO Configuration
 loadConfigurationFromFile = do 
     cla <- cmdArgs CommandLineArguments { config = def}

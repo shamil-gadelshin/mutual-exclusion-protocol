@@ -25,6 +25,7 @@ data MessageBroker = MessageBroker { inChan   :: Chan S.ByteString
                                    , outChans :: HM.HashMap String (Chan S.ByteString)
                                    }
 
+-- Constructs a new message broker from the IN- and OUT- channels.
 new :: Chan S.ByteString -> [(String, Chan S.ByteString)] -> MessageBroker
 new inChan chans = MessageBroker inChan (HM.fromList chans)
 

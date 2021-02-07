@@ -17,20 +17,25 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString
 import qualified Data.ByteString.Lazy as LBS
 
+-- Encodes a message to a string.
 encodeMessage :: Message -> ByteString
 encodeMessage =  LBS.toStrict . encodePretty
 
+-- Constructs a message object from a string.
 decodeMessage :: ByteString -> Maybe Message
 decodeMessage =  decode . LBS.fromStrict
 
+-- Defines message type: request resource the cluster, reply from peer and
+-- release the resource. 
 data Type = Request | Reply | Release deriving (Show, Generic)
 instance FromJSON Type
 instance ToJSON Type
 
-data Message = Message { msgId     :: String
-                       , timestamp :: Integer
-                       , msgType   :: Type
-                       , serverId  :: String
+-- Defines protocol message.
+data Message = Message { msgId     :: String -- message ID
+                       , timestamp :: Integer -- Lamport timestamp
+                       , msgType   :: Type -- message type
+                       , serverId  :: String -- peer ID
                        , requestId :: Maybe String -- source request id
                        } deriving (Show)
 

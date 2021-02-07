@@ -15,10 +15,12 @@ import Control.Monad.Trans
 import Control.Concurrent
 import Control.Concurrent.Chan
 
+-- Simple message delimiter.
 -- TODO: Refactor message separation
 delimiter :: C.ByteString
 delimiter = "####"
 
+-- Starts a local server on the provided port (Exported function).
 runServer :: String -> Chan C.ByteString-> IO ()
 runServer port chan = do 
     print $ "Server started on port: " ++ port
@@ -30,6 +32,7 @@ runServer port chan = do
               parseMessageBatch msg chan
               talk s
 
+-- Parses an input string and sends the message to the channel.
 parseMessageBatch :: C.ByteString -> Chan C.ByteString-> IO ()
 parseMessageBatch msg chan = do
   unless (C.null msg) $ 
@@ -41,7 +44,8 @@ parseMessageBatch msg chan = do
                    writeChan chan x
                 parseMessageBatch (C.drop (C.length delimiter) xs) chan
 
--- from the "network-run" package.
+-- Starts a local server on the provided port (Inner function).
+-- (from the "network-run" package)
 startTCPServer :: Maybe HostName -> ServiceName -> (Socket -> IO a) -> IO a
 startTCPServer mhost port server = withSocketsDo $ do
     addr <- resolve
@@ -64,7 +68,7 @@ startTCPServer mhost port server = withSocketsDo $ do
         (conn, _peer) <- accept sock
         void $ forkFinally (server conn) (const $ gracefulClose conn 5000)
   
-
+-- Starts a local client on the provided port (Exported function).
 runClient :: String -> Chan C.ByteString-> IO ()
 runClient port chan = do
     print $ "Client connects to port: " ++ port
@@ -77,6 +81,7 @@ runClient port chan = do
         liftIO $ threadDelay 500000
         E.catch startClient handler
 
+-- Sends a message from a channel to a TCP-socket.
 sendMessages :: Chan C.ByteString -> Socket -> IO () 
 sendMessages chan s = do
     sMsg <- readChan chan
@@ -84,7 +89,8 @@ sendMessages chan s = do
     sendAll s delimiter
     sendMessages chan s
 
--- from the "network-run" package.
+-- Starts a local client on the provided port (Inner function).
+-- (from the "network-run" package)
 startTCPClient :: HostName -> ServiceName -> (Socket -> IO a) -> IO a
 startTCPClient host port client = withSocketsDo $ do
     addr <- resolve

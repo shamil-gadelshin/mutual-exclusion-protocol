@@ -25,10 +25,11 @@ import qualified CriticalSection as CS;
 import qualified MessageBroker as MB;
 import qualified LTS;
 
-
+-- Priority queue type-wrapper.
 type MessagePriorityQueue = MQ.MinPQueue Integer M.Message
 
 -- TODO: gadt 
+-- Lamport mutual exclusion algoritm helper (exported type).
 data Lme b cs = Lme { boxed  :: MVar (LamportMutualExclusion cs)
                     , broker :: b
                     }
@@ -40,6 +41,7 @@ newtype ServerReplies = ServerReplies
     { serverReplies :: HM.HashMap String (HM.HashMap String Bool)
     } deriving (Show)
 
+-- Lamport mutual exclusion type.
 data LamportMutualExclusion cs = LamportMutualExclusion
     { _lts       :: LTS.Lts
     , serverId   :: String
@@ -50,11 +52,13 @@ data LamportMutualExclusion cs = LamportMutualExclusion
 
 $(makeLenses ''LamportMutualExclusion)
 
+-- Creates new instance of the Lamport mutual exclusion algorithm.
 new :: (MB.Broker br, CS.CriticalSection cs) => String -> br -> IO (Lme br cs)
 new serverId b = do
     lme <- newMVar $ LamportMutualExclusion LTS.new serverId MQ.empty HM.empty (ServerReplies HM.empty)
     return $ Lme lme b
  
+ -- Request an access to the protected resource
  -- TODO: consider modifyMVar_
 request :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs -> cs -> IO ()
 request lmeObj critSect = do
@@ -66,6 +70,7 @@ request lmeObj critSect = do
     putMVar (boxed lmeObj) lme'
     MB.broadcast (broker lmeObj) msg
 
+-- Compose a message object from the data.
 -- TODO: optimize boxing unboxing of MVar
 composeMessage :: LTS.Lts -> String -> Maybe String -> Maybe Integer -> M.Type -> IO (M.Message, LTS.Lts)
 composeMessage lts serverId sourceRequestId msgTs msgType = do
@@ -134,7 +139,7 @@ handleMessage lmeObj msg = do
 
                     return (lme',  Nothing)
 
-
+-- Starts the algorithm.
 runMessagePipeline :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs-> IO ()
 runMessagePipeline lmeObj = do
     let br = broker lmeObj

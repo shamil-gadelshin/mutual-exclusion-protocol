@@ -15,6 +15,7 @@ import Data.ByteString.Conversion
 import Data.Maybe
 import Data.Either.Combinators
 
+-- Test redis resource (update).
 updateRedis :: IO ()
 updateRedis = do
     conn <- connect defaultConnectInfo
@@ -27,6 +28,7 @@ updateRedis = do
         final <- get counterName
         liftIO $ print final
 
+-- Test redis resource (show)
 getRedisInfo :: IO ()
 getRedisInfo = do
     conn <- connect defaultConnectInfo
@@ -35,10 +37,11 @@ getRedisInfo = do
         liftIO $ print counter
         liftIO $ threadDelay 300000
 
-
+-- Get protected redis resource name
 counterName :: ByteString
 counterName = "xcounter"
 
+-- Helper function: converts a string to an integer.
 convertCounterValue :: Maybe ByteString -> Maybe Integer
 convertCounterValue = (<$>) $ read . unpack 
 
