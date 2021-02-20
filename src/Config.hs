@@ -20,7 +20,7 @@ import Control.Monad
 import qualified Data.ByteString.Lazy as LBS
 
 -- Wrapper-type for command line arguments.
--- Usage: stack build --exec "redisClient-exe --config=./configs/server1.json"
+-- Usage: stack build --exec "mep-exe --config=./configs/server1.json"
 newtype CommandLineArguments = CommandLineArguments {
                                 config :: String -- wrapperd config string
                             } deriving (Show, Data, Typeable)

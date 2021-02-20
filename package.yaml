@@ -1,23 +1,22 @@
-name:                redisClient
+name:                mep
 version:             0.1.0.0
-github:              "githubuser/redisClient"
-license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2020 Author name here"
+github:              "shamil-gadelshin/mutual-exclusion-protocol"
+license:             MIT
+author:              "Shamil Gadelshin"
+maintainer:          ""
+copyright:           "2021 Shamil Gadelshin"
 
 extra-source-files:
 - README.md
-- ChangeLog.md
 
 # Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
+# synopsis:            Mutual exclusion protocol based on Lamport algorithm.
+# category:            Distributed systems
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/redisClient#readme>
+description:         Please see the README on GitHub at <https://github.com/shamil-gadelshin/mutual-exclusion-protocol#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -42,7 +41,7 @@ library:
   source-dirs: src
 
 executables:
-  redisClient-exe:
+  mep:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -50,10 +49,10 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - redisClient
+    - mep
 
 tests:
-  redisClient-test:
+  mep-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -61,4 +60,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - redisClient
+    - mep

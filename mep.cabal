@@ -4,26 +4,23 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1af80a95765bd8d4870ceecbcd7d23703206cfab45da9243ba4bc45cb11e72b4
+-- hash: 86f095d477b52989c68b960b81b8512726e6748ef6c95bf96dfddef47ef295c6
 
-name:           redisClient
+name:           mep
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/redisClient#readme>
-homepage:       https://github.com/githubuser/redisClient#readme
-bug-reports:    https://github.com/githubuser/redisClient/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2020 Author name here
-license:        BSD3
-license-file:   LICENSE
+description:    Please see the README on GitHub at <https://github.com/shamil-gadelshin/mutual-exclusion-protocol#readme>
+homepage:       https://github.com/shamil-gadelshin/mutual-exclusion-protocol#readme
+bug-reports:    https://github.com/shamil-gadelshin/mutual-exclusion-protocol/issues
+author:         Shamil Gadelshin
+copyright:      2021 Shamil Gadelshin
+license:        MIT
 build-type:     Simple
 extra-source-files:
     README.md
-    ChangeLog.md
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/redisClient
+  location: https://github.com/shamil-gadelshin/mutual-exclusion-protocol
 
 library
   exposed-modules:
@@ -36,7 +33,7 @@ library
       RedisManager
       TcpManager
   other-modules:
-      Paths_redisClient
+      Paths_mep
   hs-source-dirs:
       src
   build-depends:
@@ -59,10 +56,10 @@ library
     , uuid
   default-language: Haskell2010
 
-executable redisClient-exe
+executable mep
   main-is: Main.hs
   other-modules:
-      Paths_redisClient
+      Paths_mep
   hs-source-dirs:
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
@@ -76,22 +73,22 @@ executable redisClient-exe
     , either
     , hedis
     , lens
+    , mep
     , mtl
     , network
     , pqueue
     , random
-    , redisClient
     , text
     , time
     , unordered-containers
     , uuid
   default-language: Haskell2010
 
-test-suite redisClient-test
+test-suite mep-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Paths_redisClient
+      Paths_mep
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
@@ -105,11 +102,11 @@ test-suite redisClient-test
     , either
     , hedis
     , lens
+    , mep
     , mtl
     , network
     , pqueue
     , random
-    , redisClient
     , text
     , time
     , unordered-containers
