@@ -110,20 +110,17 @@ handleMessage lmeObj msg = do
 
                     let replies' = registerServerReply (lme ^. replies) requestId (M.serverId msg)
 
-                    if allReplyReceived replies' requestId
+                    if (allReplyReceived replies' requestId) && (M.msgId firstMsg == requestId)
                         then do
-                            if M.msgId firstMsg == requestId
-                            then do
-                                let queue' = MQ.deleteMin queueVal
-                                
-                                -- TODO execute critical section.
-                                (msg', lts') <- composeMessage (lme ^. lts) (serverId lme) (M.requestId msg) (Just(M.timestamp msg)) M.Release 
-                                let lme' = (replies .~ (removeServerReplyEntry replies' requestId)) . (queue .~ queue') . (lts .~ lts') $ lme
+                            let queue' = MQ.deleteMin queueVal
+                            
+                            -- execute critical section.
+                            CS.execute $ (lme ^. resources) HM.! requestId
 
-                                return (lme', Just msg')
-                            else do
-                                let lme' = (replies .~ replies') lme
-                                return (lme',  Nothing)
+                            (msg', lts') <- composeMessage (lme ^. lts) (serverId lme) (M.requestId msg) (Just(M.timestamp msg)) M.Release 
+                            let lme' = (replies .~ (removeServerReplyEntry replies' requestId)) . (queue .~ queue') . (lts .~ lts') $ lme
+
+                            return (lme', Just msg')
                         else do
                             let lme' = (replies .~ replies') lme
                             return (lme',  Nothing)
