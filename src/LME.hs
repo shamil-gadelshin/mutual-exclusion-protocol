@@ -115,67 +115,72 @@ handleMessage
     -> IO (Maybe M.Message)
 handleMessage lmeObj msg = do
     lme <- takeMVar (boxed lmeObj)
-    (lme', msg') <- unwrappedHandleMessage lme msg
+    (lme', msg') <- case M.msgType msg of 
+                        M.Request -> handleRequest lme msg
+                        M.Reply   -> handleReply lme msg
+                        M.Release -> handleRelease lme msg
     putMVar (boxed lmeObj) lme'
     return msg'
     where
-        unwrappedHandleMessage lme msg =
-            case M.msgType msg of 
-                M.Request -> do
-                    let queueVal = lme ^. queue 
-                    let queue' = MQ.insert (M.timestamp msg) msg queueVal
+        handleRequest lme msg = do
+            let queueVal = lme ^. queue 
+            let queue' = MQ.insert (M.timestamp msg) msg queueVal
+
+            (msg', lts') <- composeMessage 
+                                (lme ^. lts)
+                                (serverId lme)
+                                (Just (M.msgId msg))
+                                (Just(M.timestamp msg))
+                                M.Reply 
+            let lme' = (queue .~ queue') . (lts .~ lts') $ lme
+
+            return (lme', Just msg')
+        handleReply lme msg = do
+            let queueVal = lme ^. queue 
+            let (_, firstMsg) = MQ.findMin queueVal
+
+            let requestId = fromJust $ M.requestId msg
+
+            let replies' = registerServerReply
+                                (lme ^. replies) 
+                                requestId
+                                (M.serverId msg)
+
+            if (allReplyReceived replies' requestId) && 
+                (M.msgId firstMsg == requestId)
+                then do
+                    let queue' = MQ.deleteMin queueVal
+                    
+                    -- execute critical section.
+                    CS.execute $ (lme ^. resources) HM.! requestId
 
                     (msg', lts') <- composeMessage 
                                         (lme ^. lts)
                                         (serverId lme)
-                                        (Just (M.msgId msg))
+                                        (M.requestId msg)
                                         (Just(M.timestamp msg))
-                                        M.Reply 
-                    let lme' = (queue .~ queue') . (lts .~ lts') $ lme
+                                        M.Release 
+                    let replies'' = removeServerReplyEntry replies' requestId
+                    let lme' =   (replies .~ replies'') 
+                               . (queue .~ queue') 
+                               . (lts .~ lts') 
+                               $ lme
 
                     return (lme', Just msg')
-                M.Reply   -> do 
-                    let queueVal = lme ^. queue 
-                    let (_, firstMsg) = MQ.findMin queueVal
-
-                    let requestId = fromJust $ M.requestId msg
-
-                    let replies' = registerServerReply
-                                        (lme ^. replies) 
-                                        requestId
-                                        (M.serverId msg)
-
-                    if (allReplyReceived replies' requestId) && 
-                       (M.msgId firstMsg == requestId)
-                        then do
-                            let queue' = MQ.deleteMin queueVal
-                            
-                            -- execute critical section.
-                            CS.execute $ (lme ^. resources) HM.! requestId
-
-                            (msg', lts') <- composeMessage 
-                                                (lme ^. lts)
-                                                (serverId lme)
-                                                (M.requestId msg)
-                                                (Just(M.timestamp msg))
-                                                M.Release 
-                            let lme' = (replies .~ (removeServerReplyEntry replies' requestId)) . (queue .~ queue') . (lts .~ lts') $ lme
-
-                            return (lme', Just msg')
-                        else do
-                            let lme' = (replies .~ replies') lme
-                            return (lme',  Nothing)
-
-                M.Release -> do
-                    let requestId = fromJust $ M.requestId msg
-                    let queueVal = lme ^. queue 
-                    let ((_,firstMsg), queue') = MQ.deleteFindMin queueVal
-                    when (M.msgId firstMsg /= requestId) 
-                        (return $ error "Unexpected first message in the queue on release.")
-                    
-                    let lme' = queue .~ queue' $ lme
-
+                else do
+                    let lme' = (replies .~ replies') lme
                     return (lme',  Nothing)
+        handleRelease lme msg = do
+            let requestId = fromJust $ M.requestId msg
+            let queueVal = lme ^. queue 
+            let ((_,firstMsg), queue') = MQ.deleteFindMin queueVal
+            when (M.msgId firstMsg /= requestId) $
+                return $ error "Unexpected first message in the queue on release."
+            
+            let lme' = queue .~ queue' $ lme
+
+            return (lme',  Nothing)
+
 
 -- Starts the algorithm.
 runMessagePipeline 
