@@ -21,7 +21,7 @@ updateRedis = do
     conn <- connect defaultConnectInfo
     runRedis conn $ do
         counter <- get counterName
-        convCounter <- return . convertCounterValue $ (join . rightToMaybe) counter
+        let convCounter = convertCounterValue $ (join . rightToMaybe) counter
         let next = toByteString' . (+1) <$> convCounter
         set counterName $ fromMaybe "0" next
         liftIO $ threadDelay 1000000

@@ -22,7 +22,9 @@ class Broker a  where
 
 -- Message broker implementation based on syncrhonous channels. 
 data MessageBroker = MessageBroker { inChan   :: Chan S.ByteString 
-                                   , outChans :: HM.HashMap String (Chan S.ByteString)
+                                   , outChans :: HM.HashMap 
+                                                      String
+                                                      (Chan S.ByteString)
                                    }
 
 -- Constructs a new message broker from the IN- and OUT- channels.
@@ -36,5 +38,7 @@ instance Broker MessageBroker where
     send broker serverId msg = do
         let chan = outChans broker HM.! serverId
         writeChan chan (encodeMessage msg)
-    broadcast broker msg = mapM_ (\pid -> send broker pid msg) (HM.keys $ outChans broker)
+    broadcast broker msg = mapM_ 
+                            (\pid -> send broker pid msg)
+                            (HM.keys $ outChans broker)
     peers broker = HM.keys $ outChans broker

@@ -58,7 +58,10 @@ startTCPServer mhost port server = withSocketsDo $ do
               }
         head <$> getAddrInfo (Just hints) mhost (Just port)
     open addr = do
-        sock <- socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
+        sock <- socket
+                  (addrFamily addr)
+                  (addrSocketType addr)
+                  (addrProtocol addr)
         setSocketOption sock ReuseAddr 1
         withFdSocket sock setCloseOnExecIfNeeded
         bind sock $ addrAddress addr
@@ -100,6 +103,9 @@ startTCPClient host port client = withSocketsDo $ do
         let hints = defaultHints { addrSocketType = Stream }
         head <$> getAddrInfo (Just hints) (Just host) (Just port)
     open addr = do
-        sock <- socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
+        sock <- socket
+                  (addrFamily addr)
+                  (addrSocketType addr)
+                  (addrProtocol addr)
         connect sock $ addrAddress addr
         return sock

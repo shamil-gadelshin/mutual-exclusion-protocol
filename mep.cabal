@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 86f095d477b52989c68b960b81b8512726e6748ef6c95bf96dfddef47ef295c6
+-- hash: 85b70975e7169b4996b82a1f7420dbdb1265f9d3134c11915a9afbfaaa23b094
 
 name:           mep
 version:        0.1.0.0
@@ -14,6 +14,7 @@ bug-reports:    https://github.com/shamil-gadelshin/mutual-exclusion-protocol/is
 author:         Shamil Gadelshin
 copyright:      2021 Shamil Gadelshin
 license:        MIT
+license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md

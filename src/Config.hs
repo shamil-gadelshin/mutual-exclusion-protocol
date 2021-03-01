@@ -22,17 +22,17 @@ import qualified Data.ByteString.Lazy as LBS
 -- Wrapper-type for command line arguments.
 -- Usage: stack build --exec "mep-exe --config=./configs/server1.json"
 newtype CommandLineArguments = CommandLineArguments {
-                                config :: String -- wrapperd config string
+                                config :: String -- wrapped config string
                             } deriving (Show, Data, Typeable)
 
 -- Cluster configuration
-data Configuration = Configuration { local       :: ServerCfg -- local node
+data Configuration = Configuration { local   :: ServerCfg -- local node
                                    , remotes :: [ServerCfg] -- remote nodes
                                    } deriving (Show)
 
 --TODO: add domain for a distributed run.
 -- Node configuration
-data ServerCfg = ServerCfg { pid         :: String -- unique ID
+data ServerCfg = ServerCfg { pid   :: String -- unique ID
                            , port  :: String -- TCP-port for local runs
                            } deriving (Show)
 
@@ -42,7 +42,9 @@ loadConfigurationFromFile :: IO Configuration
 loadConfigurationFromFile = do 
     cla <- cmdArgs CommandLineArguments { config = def}
     let fileName = config cla
-    json <- catch (decodeFileStrict fileName :: IO (Maybe Configuration))  printLoadErr
+    json <- catch 
+                (decodeFileStrict fileName :: IO (Maybe Configuration)) 
+                printLoadErr
     return $ fromMaybe printDecodeErr json
         where 
             printLoadErr :: SomeException -> IO (Maybe Configuration)
