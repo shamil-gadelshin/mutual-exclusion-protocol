@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 85b70975e7169b4996b82a1f7420dbdb1265f9d3134c11915a9afbfaaa23b094
+-- hash: a10f70c44bb400a5b01b17d0c72b82bf8670cbc485a2b346b0d9af21b8190305
 
 name:           mep
 version:        0.1.0.0
@@ -87,8 +87,10 @@ executable mep
 
 test-suite mep-test
   type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  main-is: Main.hs
   other-modules:
+      LTSSpec
+      Spec
       Paths_mep
   hs-source-dirs:
       test
@@ -102,6 +104,8 @@ test-suite mep-test
     , cmdargs
     , either
     , hedis
+    , hspec
+    , hspec-discover
     , lens
     , mep
     , mtl
