@@ -2,9 +2,17 @@ module LTSSpec (spec)
 where
 
 import Test.Hspec
+import qualified LTS
 
 spec :: Spec
 spec = do
-  describe "Prelude.read" $ do
-      it "can parse integers" $ do
-        read "10" `shouldBe` (10 :: Int)
+  describe "LTS" $ do
+      it "`new` works" $ do
+        LTS.new `shouldBe` LTS.Lts 1 
+      it "`touch` works" $ do
+        LTS.touch LTS.new `shouldBe` LTS.Lts 2    
+      it "`create` works" $ do
+        LTS.create 10 `shouldBe` LTS.Lts 10
+      it "`update` works" $ do
+        LTS.update (LTS.Lts 10) (LTS.Lts 20) `shouldBe` LTS.Lts 21
+        LTS.update (LTS.Lts 20) (LTS.Lts 10) `shouldBe` LTS.Lts 21

@@ -11,7 +11,7 @@ module LTS
     ) where
 
 -- Lamport timestamp type
-newtype Lts = Lts Integer deriving (Show)
+newtype Lts = Lts Integer deriving (Show, Eq)
 
 
 
