@@ -10,27 +10,25 @@ module LTS
     , Lts(..)
     ) where
 
--- Lamport timestamp type
+-- | Lamport timestamp type
 newtype Lts = Lts Integer deriving (Show, Eq)
 
-
-
--- creates new timestamp with default value = 1
+-- | Creates new timestamp with default value = 1.
 new :: Lts 
 new = Lts 1
 
--- creates new timestamp
+-- | Creates new timestamp.
 create :: Integer -> Lts 
 create = Lts
 
--- gets the current value
+-- | Gets the current value.
 peek :: Lts -> Integer
 peek (Lts c) = c
 
--- increments the current timestamp value
+-- | Increments the current timestamp value.
 touch :: Lts -> Lts
 touch (Lts c) = Lts $ c+1
 
--- increments maximum of the provided timestamp values
+-- | Increments maximum of the provided timestamp values.
 update :: Lts -> Lts -> Lts
 update (Lts u) (Lts c) = Lts $ max u c + 1

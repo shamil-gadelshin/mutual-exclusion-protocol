@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 
+-- | Defines the main protocol message format and 
+
 module Message
     ( encodeMessage
     , decodeMessage
@@ -17,29 +19,42 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString
 import qualified Data.ByteString.Lazy as LBS
 
--- Encodes a message to a string.
+-- | Encodes a message to a string.
 encodeMessage :: Message -> ByteString
 encodeMessage =  LBS.toStrict . encodePretty
 
--- Constructs a message object from a string.
+-- | Constructs a message object from a string.
 decodeMessage :: ByteString -> Maybe Message
 decodeMessage =  decode . LBS.fromStrict
 
--- Defines message type: request resource the cluster, reply from peer and
+-- | Defines message type: request resource the cluster, reply from peer and
 -- release the resource. 
-data Type = Request | Reply | Release deriving (Show, Generic)
+data Type 
+    -- | Request a resource
+  = Request       
+    -- | Confirms receiving a request                    
+  | Reply                      
+    -- | Release the resource       
+  | Release  deriving (Show, Generic) 
+            
 instance FromJSON Type
 instance ToJSON Type
 
--- Defines protocol message.
-data Message = Message { msgId     :: String -- message ID
-                       , timestamp :: Integer -- Lamport timestamp
-                       , msgType   :: Type -- message type
-                       , serverId  :: String -- peer ID
-                       , requestId :: Maybe String -- source request id
-                       } deriving (Show)
+-- | Defines protocol message.
+data Message = Message { 
+    -- | Message ID
+    msgId     :: String      
+    -- | Lamport timestamp
+    ,timestamp :: Integer      
+    -- | Message type
+    ,msgType   :: Type         
+    -- | Peer server ID
+    ,serverId  :: String       
+    -- | Source request id
+    , requestId :: Maybe String 
+    } deriving (Show)
 
--- Tell Aeson how to create an Message object from JSON string.
+-- | Tell Aeson how to create an Message object from JSON string.
 instance FromJSON Message where
      parseJSON (Object v) = Message <$>
                             v .:  "msgId"  <*>
@@ -48,7 +63,7 @@ instance FromJSON Message where
                             v .:  "serverId" <*>
                             v .:  "requestId"
 
--- Tell Aeson how to convert an Message object to a JSON string.
+-- | Tell Aeson how to convert an Message object to a JSON string.
 instance ToJSON Message where
      toJSON (Message msgId timestamp msgType serverId requestId) =
          object [ "msgId" .= msgId
