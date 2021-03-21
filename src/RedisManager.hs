@@ -1,9 +1,10 @@
+-- | Defines operation with Redis database. 
 
 {-# LANGUAGE OverloadedStrings #-}
 
 module RedisManager
-    ( updateRedis
-    , getRedisInfo
+    ( incrementCounter
+    , showCounter
     ) where
 
 import Database.Redis
@@ -15,9 +16,9 @@ import Data.ByteString.Conversion
 import Data.Maybe
 import Data.Either.Combinators
 
--- Test redis resource (update).
-updateRedis :: IO ()
-updateRedis = do
+-- | Increment redis-based counter.
+incrementCounter :: IO ()
+incrementCounter = do
     conn <- connect defaultConnectInfo
     runRedis conn $ do
         counter <- get counterName
@@ -28,9 +29,9 @@ updateRedis = do
         final <- get counterName
         liftIO $ print final
 
--- Test redis resource (show)
-getRedisInfo :: IO ()
-getRedisInfo = do
+-- | Show redis-based counter.
+showCounter :: IO ()
+showCounter = do
     conn <- connect defaultConnectInfo
     runRedis conn $ do
         counter <- get counterName

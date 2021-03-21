@@ -2,6 +2,9 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 -- {-# OPTIONS_GHC -fno-cse #-}
 
+-- | Defines the command line argument for an application and 
+-- configuration parameters. 
+
 module Config
     ( loadConfigurationFromFile
     , Configuration(..)
@@ -25,18 +28,18 @@ newtype CommandLineArguments = CommandLineArguments {
                                 config :: String -- wrapped config string
                             } deriving (Show, Data, Typeable)
 
--- Cluster configuration
+-- | Cluster configuration.
 data Configuration = Configuration { local   :: ServerCfg -- local node
                                    , remotes :: [ServerCfg] -- remote nodes
                                    } deriving (Show)
 
--- Node configuration
+-- | Node configuration.
 data ServerCfg = ServerCfg { pid   :: String -- unique ID
                            , port  :: String -- TCP-port for local runs
                            } deriving (Show)
 
 
--- Loads a configuration from the provided config-file name.
+-- | Loads a configuration from the provided config-file name.
 loadConfigurationFromFile :: IO Configuration
 loadConfigurationFromFile = do 
     cla <- cmdArgs CommandLineArguments { config = def}

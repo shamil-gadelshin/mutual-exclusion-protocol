@@ -1,3 +1,5 @@
+-- | Provides TCP transport.
+
 {-# LANGUAGE OverloadedStrings #-}
 
 module TcpManager
@@ -20,7 +22,7 @@ import Control.Concurrent.Chan
 delimiter :: C.ByteString
 delimiter = "####"
 
--- Starts a local server on the provided port (Exported function).
+-- | Starts a local server on the provided port.
 runServer :: String -> Chan C.ByteString-> IO ()
 runServer port chan = do 
     print $ "Server started on port: " ++ port
@@ -71,7 +73,7 @@ startTCPServer mhost port server = withSocketsDo $ do
         (conn, _peer) <- accept sock
         void $ forkFinally (server conn) (const $ gracefulClose conn 5000)
   
--- Starts a local client on the provided port (Exported function).
+-- | Starts a local client on the provided port.
 runClient :: String -> Chan C.ByteString-> IO ()
 runClient port chan = do
     print $ "Client connects to port: " ++ port

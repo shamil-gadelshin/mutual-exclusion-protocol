@@ -1,3 +1,5 @@
+-- | Provides high-level transport abstraction. 
+
 module MessageBroker
     ( Broker(..)
     , MessageBroker
@@ -9,7 +11,7 @@ import Control.Concurrent.Chan
 import qualified Data.ByteString as S
 import Message
 
--- The Broker class defines communication abstraction for messages
+-- | The Broker class defines communication abstraction for messages
 class Broker a  where
     -- Receives a message from communication channel.
     receive   :: a -> IO (Maybe Message)
@@ -20,14 +22,14 @@ class Broker a  where
     -- Returns peers ids
     peers     :: a -> [String]
 
--- Message broker implementation based on syncrhonous channels. 
+-- | Message broker implementation based on syncrhonous channels. 
 data MessageBroker = MessageBroker { inChan   :: Chan S.ByteString 
                                    , outChans :: HM.HashMap 
                                                       String
                                                       (Chan S.ByteString)
                                    }
 
--- Constructs a new message broker from the IN- and OUT- channels.
+-- | Constructs a new message broker from the IN- and OUT- channels.
 new :: Chan S.ByteString -> [(String, Chan S.ByteString)] -> MessageBroker
 new inChan chans = MessageBroker inChan (HM.fromList chans)
 

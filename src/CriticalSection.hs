@@ -1,3 +1,5 @@
+-- | Presents a concept of protected resource and a couple of test examples.
+
 module CriticalSection
     ( CriticalSection(..)
     , DummyResource(..)
@@ -6,17 +8,19 @@ module CriticalSection
 
 import Control.Concurrent.MVar
 
--- The CriticalSection class represents a resource that needs protection.
+-- | The CriticalSection class represents a resource that needs protection.
 class CriticalSection a  where
     -- Access the protected resource and/or execute an action on it.
     execute   :: a -> IO ()
 
--- Test resource printing for a critical section.
+-- | CriticalSection example - prints message. 
+-- Execution wrapped as a protected resource.
 newtype DummyResource = DummyResource String deriving (Show)
 instance CriticalSection DummyResource where
     execute dummy = print dummy
 
--- Test resource counter with a critical section.
+-- | CriticalSection example - increments a counter. 
+-- Execution wrapped as a protected resource.
 newtype ProtectedCounter = ProtectedCounter { counter :: MVar Integer }
 instance CriticalSection ProtectedCounter where
     execute pc = do

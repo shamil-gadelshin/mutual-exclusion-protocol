@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 
--- | Defines the main protocol message format and 
+-- | Defines the main protocol message format. 
 
 module Message
     ( encodeMessage

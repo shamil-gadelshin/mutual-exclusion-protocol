@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
--- | Lamport mutual exclusion algorithm module
---   https://en.wikipedia.org/wiki/Lamport%27s_distributed_mutual_exclusion_algorithm
+-- | Lamport mutual exclusion algorithm module.
+-- Details: https://en.wikipedia.org/wiki/Lamport%27s_distributed_mutual_exclusion_algorithm
 
 module LME
     ( new
@@ -29,7 +29,7 @@ import qualified LTS;
 type MessagePriorityQueue = MQ.MinPQueue Integer M.Message
 
 -- TODO: Consider gadt 
--- Lamport mutual exclusion algoritm helper (exported type).
+-- | Lamport mutual exclusion algoritm helper.
 data Lme b cs = Lme { boxed  :: MVar (LamportMutualExclusion cs)
                     , broker :: b -- abstract message broker
                     }
@@ -41,7 +41,7 @@ newtype ServerReplies = ServerReplies
     { serverReplies :: HM.HashMap String (HM.HashMap String Bool)
     } deriving (Show)
 
--- Lamport mutual exclusion type.
+-- Data structure for the Lamport mutual exclusion algorithm.
 data LamportMutualExclusion cs = LamportMutualExclusion
     { _lts       :: LTS.Lts              -- current Lamport timestamp
     , serverId   :: String               -- local server ID
@@ -53,7 +53,7 @@ data LamportMutualExclusion cs = LamportMutualExclusion
 
 $(makeLenses ''LamportMutualExclusion)
 
--- Creates new instance of the Lamport mutual exclusion algorithm.
+-- | Creates a new instance of the Lamport mutual exclusion algorithm.
 new :: (MB.Broker br, CS.CriticalSection cs) => String -> br -> IO (Lme br cs)
 new serverId b = do
     lme <- newMVar $ LamportMutualExclusion 
@@ -63,9 +63,9 @@ new serverId b = do
                         HM.empty 
                         (ServerReplies HM.empty)
     return $ Lme lme b
- 
- -- Request an access to the protected resource
- -- TODO: consider modifyMVar_
+
+-- TODO: consider modifyMVar_
+-- | Request an access to the protected resource.
 request :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs -> cs -> IO ()
 request lmeObj critSect = do
     lme <- takeMVar $ boxed lmeObj
@@ -186,7 +186,7 @@ handleMessage lmeObj msg = do
             return (lme',  Nothing)
 
 
--- Starts the algorithm.
+-- | Process a single incoming message. Should be run in a cycle.
 runMessagePipeline 
     :: (MB.Broker br, CS.CriticalSection cs) 
     => Lme br cs
