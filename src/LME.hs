@@ -80,8 +80,13 @@ request lmeObj critSect = do
                         (lme ^. replies) 
                         (M.msgId msg) 
                         (MB.peers $ broker lmeObj)
+
+    let queue' = lme ^. queue 
+    let queue'' = MQ.insert (M.timestamp msg) msg queue'
+
     let lme' = (resources .~ resources') 
                     . (replies .~ replies') 
+                    . (queue .~ queue'') 
                     . (lts .~ lts') 
                     $ lme
     putMVar (boxed lmeObj) lme'
@@ -147,7 +152,7 @@ handleMessage lmeObj msg = do
                                 (M.serverId msg)
 
             if (allReplyReceived replies' requestId) && 
-                (M.msgId firstMsg == requestId)
+               (M.msgId firstMsg == requestId)
                 then do
                     let queue' = MQ.deleteMin queueVal
                     
