@@ -30,7 +30,6 @@ data Configuration = Configuration { local   :: ServerCfg -- local node
                                    , remotes :: [ServerCfg] -- remote nodes
                                    } deriving (Show)
 
---TODO: add domain for a distributed run.
 -- Node configuration
 data ServerCfg = ServerCfg { pid   :: String -- unique ID
                            , port  :: String -- TCP-port for local runs

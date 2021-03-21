@@ -28,7 +28,7 @@ import qualified LTS;
 -- Priority queue type-wrapper.
 type MessagePriorityQueue = MQ.MinPQueue Integer M.Message
 
--- TODO: gadt 
+-- TODO: Consider gadt 
 -- Lamport mutual exclusion algoritm helper (exported type).
 data Lme b cs = Lme { boxed  :: MVar (LamportMutualExclusion cs)
                     , broker :: b -- abstract message broker
@@ -93,7 +93,6 @@ request lmeObj critSect = do
     MB.broadcast (broker lmeObj) msg
 
 -- Compose a message object from the data.
--- TODO: optimize boxing unboxing of MVar
 composeMessage 
     :: LTS.Lts        -- current Lamport timestamp for the algorithm
     -> String         -- local server ID 
@@ -198,7 +197,7 @@ runMessagePipeline lmeObj = do
     maybe printErr handleMsg msg
       where
         handleMsg m = do
-            print m
+            print $ "Handling message: " ++ show m
             newMsg <- handleMessage lmeObj m
             forM_ newMsg $ sendMsg (broker lmeObj) (M.serverId m) 
         printErr = print "Corrupted message detected."

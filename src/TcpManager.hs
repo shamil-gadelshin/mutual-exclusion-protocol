@@ -16,7 +16,7 @@ import Control.Concurrent
 import Control.Concurrent.Chan
 
 -- Simple message delimiter.
--- TODO: Refactor message separation
+-- TODO: Refactor message separation.
 delimiter :: C.ByteString
 delimiter = "####"
 
