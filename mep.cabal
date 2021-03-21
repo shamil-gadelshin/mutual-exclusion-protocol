@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a10f70c44bb400a5b01b17d0c72b82bf8670cbc485a2b346b0d9af21b8190305
+-- hash: dec629870f8a485e3b367e1f7470b3af3e9f17598c0d37abbfdb29f1e222187a
 
 name:           mep
 version:        0.1.0.0
@@ -89,6 +89,7 @@ test-suite mep-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      LMESpec
       LTSSpec
       Spec
       Paths_mep

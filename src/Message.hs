@@ -35,7 +35,7 @@ data Type
     -- | Confirms receiving a request                    
   | Reply                      
     -- | Release the resource       
-  | Release  deriving (Show, Generic) 
+  | Release  deriving (Show, Eq, Generic) 
             
 instance FromJSON Type
 instance ToJSON Type
@@ -52,7 +52,7 @@ data Message = Message {
     ,serverId  :: String       
     -- | Source request id
     , requestId :: Maybe String 
-    } deriving (Show)
+    } deriving (Show, Eq)
 
 -- | Tell Aeson how to create an Message object from JSON string.
 instance FromJSON Message where
