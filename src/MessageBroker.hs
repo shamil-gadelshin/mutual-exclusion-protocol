@@ -1,4 +1,4 @@
--- | Provides high-level transport abstraction. 
+-- | Provides high-level transport abstraction.
 
 module MessageBroker
     ( Broker(..)
@@ -6,10 +6,10 @@ module MessageBroker
     , new
     ) where
 
-import qualified Data.HashMap.Strict as HM;
-import Control.Concurrent.Chan
-import qualified Data.ByteString as S
-import Message
+import           Control.Concurrent.Chan
+import qualified Data.ByteString         as S
+import qualified Data.HashMap.Strict     as HM
+import           Message
 
 -- | The Broker class defines communication abstraction for messages
 class Broker a  where
@@ -22,12 +22,11 @@ class Broker a  where
     -- Returns peers ids
     peers     :: a -> [String]
 
--- | Message broker implementation based on syncrhonous channels. 
-data MessageBroker = MessageBroker { inChan   :: Chan S.ByteString 
-                                   , outChans :: HM.HashMap 
-                                                      String
-                                                      (Chan S.ByteString)
-                                   }
+-- | Message broker implementation based on syncrhonous channels.
+data MessageBroker = MessageBroker
+    { inChan   :: Chan S.ByteString
+    , outChans :: HM.HashMap String (Chan S.ByteString)
+    }
 
 -- | Constructs a new message broker from the IN- and OUT- channels.
 new :: Chan S.ByteString -> [(String, Chan S.ByteString)] -> MessageBroker
@@ -40,7 +39,7 @@ instance Broker MessageBroker where
     send broker serverId msg = do
         let chan = outChans broker HM.! serverId
         writeChan chan (encodeMessage msg)
-    broadcast broker msg = mapM_ 
+    broadcast broker msg = mapM_
                             (\pid -> send broker pid msg)
                             (HM.keys $ outChans broker)
     peers broker = HM.keys $ outChans broker

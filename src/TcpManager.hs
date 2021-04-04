@@ -7,15 +7,15 @@ module TcpManager
     , runClient
     ) where
 
-import qualified Control.Exception as E
-import Control.Monad (unless, forever, void, when)
-import qualified Data.ByteString as S
-import Network.Socket
-import Network.Socket.ByteString (recv, sendAll)
-import qualified Data.ByteString.Char8 as C
-import Control.Monad.Trans
-import Control.Concurrent
-import Control.Concurrent.Chan
+import           Control.Concurrent
+import           Control.Concurrent.Chan
+import qualified Control.Exception         as E
+import           Control.Monad             (forever, unless, void, when)
+import           Control.Monad.Trans
+import qualified Data.ByteString           as S
+import qualified Data.ByteString.Char8     as C
+import           Network.Socket
+import           Network.Socket.ByteString (recv, sendAll)
 
 -- Simple message delimiter.
 -- TODO: Refactor message separation.
@@ -24,12 +24,12 @@ delimiter = "####"
 
 -- | Starts a local server on the provided port.
 runServer :: String -> Chan C.ByteString-> IO ()
-runServer port chan = do 
+runServer port chan = do
     print $ "Server started on port: " ++ port
     startTCPServer Nothing port talk
       where
         talk s = do
-            msg <- recv s 1024 
+            msg <- recv s 1024
             unless (S.null msg) $ do
               parseMessageBatch msg chan
               talk s
@@ -37,7 +37,7 @@ runServer port chan = do
 -- Parses an input string and sends the message to the channel.
 parseMessageBatch :: C.ByteString -> Chan C.ByteString-> IO ()
 parseMessageBatch msg chan = do
-  unless (C.null msg) $ 
+  unless (C.null msg) $
     case C.breakSubstring delimiter msg of
       (x,xs) | C.null xs -> do
                 writeChan chan x
@@ -72,7 +72,7 @@ startTCPServer mhost port server = withSocketsDo $ do
     loop sock = forever $ do
         (conn, _peer) <- accept sock
         void $ forkFinally (server conn) (const $ gracefulClose conn 5000)
-  
+
 -- | Starts a local client on the provided port.
 runClient :: String -> Chan C.ByteString-> IO ()
 runClient port chan = do
@@ -81,13 +81,13 @@ runClient port chan = do
     where
       startClient = startTCPClient "127.0.0.1" port $ sendMessages chan
       handler :: E.SomeException -> IO ()
-      handler ex = do 
+      handler ex = do
         putStrLn $ "Caught exception: " ++ show ex
         liftIO $ threadDelay 500000
         E.catch startClient handler
 
 -- Sends a message from a channel to a TCP-socket.
-sendMessages :: Chan C.ByteString -> Socket -> IO () 
+sendMessages :: Chan C.ByteString -> Socket -> IO ()
 sendMessages chan s = do
     sMsg <- readChan chan
     sendAll s sMsg

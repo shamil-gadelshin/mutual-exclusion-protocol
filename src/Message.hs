@@ -1,7 +1,7 @@
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
 
--- | Defines the main protocol message format. 
+-- | Defines the main protocol message format.
 
 module Message
     ( encodeMessage
@@ -10,14 +10,14 @@ module Message
     , Message(..)
     ) where
 
-import GHC.Generics
-import Data.Text.Lazy
-import Data.Text.Lazy.Encoding
-import Data.Aeson
-import Control.Applicative
-import Data.Aeson.Encode.Pretty (encodePretty)
-import Data.ByteString
-import qualified Data.ByteString.Lazy as LBS
+import           Control.Applicative
+import           Data.Aeson
+import           Data.Aeson.Encode.Pretty (encodePretty)
+import           Data.ByteString
+import qualified Data.ByteString.Lazy     as LBS
+import           Data.Text.Lazy
+import           Data.Text.Lazy.Encoding
+import           GHC.Generics
 
 -- | Encodes a message to a string.
 encodeMessage :: Message -> ByteString
@@ -28,31 +28,28 @@ decodeMessage :: ByteString -> Maybe Message
 decodeMessage =  decode . LBS.fromStrict
 
 -- | Defines message type: request resource the cluster, reply from peer and
--- release the resource. 
-data Type 
-    -- | Request a resource
-  = Request       
-    -- | Confirms receiving a request                    
-  | Reply                      
-    -- | Release the resource       
-  | Release  deriving (Show, Eq, Generic) 
-            
+-- release the resource.
+data Type = Request
+    | Reply
+    | Release
+    deriving (Show, Eq, Generic)
+
 instance FromJSON Type
 instance ToJSON Type
 
 -- | Defines protocol message.
-data Message = Message { 
-    -- | Message ID
-    msgId     :: String      
+data Message = Message
+    { msgId     :: String
     -- | Lamport timestamp
-    ,timestamp :: Integer      
+    , timestamp :: Integer
     -- | Message type
-    ,msgType   :: Type         
+    , msgType   :: Type
     -- | Peer server ID
-    ,serverId  :: String       
+    , serverId  :: String
     -- | Source request id
-    , requestId :: Maybe String 
-    } deriving (Show, Eq)
+    , requestId :: Maybe String
+    }
+    deriving (Show, Eq)
 
 -- | Tell Aeson how to create an Message object from JSON string.
 instance FromJSON Message where
@@ -68,7 +65,7 @@ instance ToJSON Message where
      toJSON (Message msgId timestamp msgType serverId requestId) =
          object [ "msgId" .= msgId
                 , "timestamp" .= timestamp
-                , "msgType" .= msgType 
-                , "serverId" .= serverId 
-                , "requestId" .= requestId 
+                , "msgType" .= msgType
+                , "serverId" .= serverId
+                , "requestId" .= requestId
                 ]

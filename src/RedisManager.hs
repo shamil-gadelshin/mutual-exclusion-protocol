@@ -1,4 +1,4 @@
--- | Defines operation with Redis database. 
+-- | Defines operation with Redis database.
 
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -7,14 +7,14 @@ module RedisManager
     , showCounter
     ) where
 
-import Database.Redis
-import Control.Monad
-import Control.Monad.Trans
-import Control.Concurrent
-import Data.ByteString.Char8
-import Data.ByteString.Conversion
-import Data.Maybe
-import Data.Either.Combinators
+import           Control.Concurrent
+import           Control.Monad
+import           Control.Monad.Trans
+import           Data.ByteString.Char8
+import           Data.ByteString.Conversion
+import           Data.Either.Combinators
+import           Data.Maybe
+import           Database.Redis
 
 -- | Increment redis-based counter.
 incrementCounter :: IO ()
@@ -44,5 +44,5 @@ counterName = "xcounter"
 
 -- Helper function: converts a string to an integer.
 convertCounterValue :: Maybe ByteString -> Maybe Integer
-convertCounterValue = (<$>) $ read . unpack 
+convertCounterValue = (<$>) $ read . unpack
 

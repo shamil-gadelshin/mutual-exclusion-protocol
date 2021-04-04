@@ -14,11 +14,11 @@ module LTS
 newtype Lts = Lts Integer deriving (Show, Eq)
 
 -- | Creates new timestamp with default value = 1.
-new :: Lts 
+new :: Lts
 new = Lts 1
 
 -- | Creates new timestamp.
-create :: Integer -> Lts 
+create :: Integer -> Lts
 create = Lts
 
 -- | Gets the current value.

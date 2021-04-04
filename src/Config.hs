@@ -1,9 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings  #-}
 -- {-# OPTIONS_GHC -fno-cse #-}
 
--- | Defines the command line argument for an application and 
--- configuration parameters. 
+-- | Defines the command line argument for an application and
+-- configuration parameters.
 
 module Config
     ( loadConfigurationFromFile
@@ -11,16 +11,16 @@ module Config
     , ServerCfg(..)
     ) where
 
-import Data.ByteString.Char8 as Char8
-import System.Console.CmdArgs
-import Data.Aeson
-import Control.Exception
-import Control.Applicative
-import Data.ByteString
-import Data.Text.Lazy
-import Data.Maybe
-import Control.Monad
-import qualified Data.ByteString.Lazy as LBS
+import           Control.Applicative
+import           Control.Exception
+import           Control.Monad
+import           Data.Aeson
+import           Data.ByteString
+import           Data.ByteString.Char8  as Char8
+import qualified Data.ByteString.Lazy   as LBS
+import           Data.Maybe
+import           Data.Text.Lazy
+import           System.Console.CmdArgs
 
 -- Wrapper-type for command line arguments.
 -- Usage: stack build --exec "mep-exe --config=./configs/server1.json"
@@ -29,26 +29,32 @@ newtype CommandLineArguments = CommandLineArguments {
                             } deriving (Show, Data, Typeable)
 
 -- | Cluster configuration.
-data Configuration = Configuration { local   :: ServerCfg -- local node
-                                   , remotes :: [ServerCfg] -- remote nodes
-                                   } deriving (Show)
+data Configuration = Configuration
+    { local   :: ServerCfg -- local node
+    -- remote nodes
+    , remotes :: [ServerCfg] -- remote nodes
+    }
+    deriving (Show)
 
 -- | Node configuration.
-data ServerCfg = ServerCfg { pid   :: String -- unique ID
-                           , port  :: String -- TCP-port for local runs
-                           } deriving (Show)
+data ServerCfg = ServerCfg
+    { pid  :: String -- unique ID
+    -- TCP-port for local runs
+    , port :: String -- TCP-port for local runs
+    }
+    deriving (Show)
 
 
 -- | Loads a configuration from the provided config-file name.
 loadConfigurationFromFile :: IO Configuration
-loadConfigurationFromFile = do 
+loadConfigurationFromFile = do
     cla <- cmdArgs CommandLineArguments { config = def}
     let fileName = config cla
-    json <- catch 
-                (decodeFileStrict fileName :: IO (Maybe Configuration)) 
+    json <- catch
+                (decodeFileStrict fileName :: IO (Maybe Configuration))
                 printLoadErr
     return $ fromMaybe printDecodeErr json
-        where 
+        where
             printLoadErr :: SomeException -> IO (Maybe Configuration)
             printLoadErr = error "Cannot load configuration file."
             printDecodeErr = error "Cannot decode configuration file."
@@ -63,7 +69,7 @@ instance FromJSON ServerCfg where
 instance ToJSON ServerCfg where
      toJSON (ServerCfg pid port) =
          object [ "pid" .= pid
-                , "port" .= port 
+                , "port" .= port
                 ]
 
 -- Tell Aeson how to create an Configuration object from JSON string.
@@ -75,6 +81,6 @@ instance FromJSON Configuration where
 -- Tell Aeson how to convert an Configuration object to a JSON string.
 instance ToJSON Configuration where
      toJSON (Configuration local remotes) =
-         object [ "local" .= local 
-                , "remotes" .= remotes 
+         object [ "local" .= local
+                , "remotes" .= remotes
                 ]

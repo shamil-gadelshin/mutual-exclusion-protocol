@@ -10,31 +10,33 @@ module LME
     , Lme
     ) where
 
-import Control.Concurrent.MVar
-import Control.Monad
-import Data.UUID
-import Data.Maybe
-import qualified Data.HashMap.Strict as HM;
-import System.Random
-import Control.Lens
-import Control.Lens.Prism
-import qualified Data.PQueue.Prio.Min as MQ
+import           Control.Concurrent.MVar
+import           Control.Lens
+import           Control.Lens.Prism
+import           Control.Monad
+import qualified Data.HashMap.Strict     as HM
+import           Data.Maybe
+import qualified Data.PQueue.Prio.Min    as MQ
+import           Data.UUID
+import           System.Random
 
-import qualified Message as M;
-import qualified CriticalSection as CS;
-import qualified MessageBroker as MB;
-import qualified LTS;
+import qualified CriticalSection         as CS
+import qualified LTS
+import qualified Message                 as M
+import qualified MessageBroker           as MB
 
 -- Priority queue type-wrapper.
 type MessagePriorityQueue = MQ.MinPQueue Integer M.Message
 
--- TODO: Consider gadt 
+-- TODO: Consider gadt
 -- | Lamport mutual exclusion algoritm helper.
-data Lme b cs = Lme { boxed  :: MVar (LamportMutualExclusion cs)
-                    , broker :: b -- abstract message broker
-                    }
+data Lme b cs = Lme
+    { boxed  :: MVar (LamportMutualExclusion cs)
+    -- abstract message broker
+    , broker :: b -- abstract message broker
+    }
 
--- Collects replies from other servers for local requests 
+-- Collects replies from other servers for local requests
 -- combined by original requests IDs
 newtype ServerReplies = ServerReplies
     -- Pseudocode: serverReplies = map (requestId map (serverId repliedFlag))
@@ -43,24 +45,26 @@ newtype ServerReplies = ServerReplies
 
 -- Data structure for the Lamport mutual exclusion algorithm.
 data LamportMutualExclusion cs = LamportMutualExclusion
-    { _lts       :: LTS.Lts              -- current Lamport timestamp
-    , serverId   :: String               -- local server ID
-    , _queue     :: MessagePriorityQueue {-| Resource access priority queue 
- sorted by the Lamport timestamp of the message. -}
+    { _lts       :: LTS.Lts -- current Lamport timestamp
+    -- local server ID
+    , serverId   :: String -- local server ID
+    , _queue     :: MessagePriorityQueue
     , _resources :: HM.HashMap String cs -- protected resources
-    , _replies   :: ServerReplies        -- replies from the peers
-    } deriving (Show)
+    -- replies from the peers
+    , _replies   :: ServerReplies -- replies from the peers
+    }
+    deriving (Show)
 
 $(makeLenses ''LamportMutualExclusion)
 
 -- | Creates a new instance of the Lamport mutual exclusion algorithm.
 new :: (MB.Broker br, CS.CriticalSection cs) => String -> br -> IO (Lme br cs)
 new serverId b = do
-    lme <- newMVar $ LamportMutualExclusion 
-                        LTS.new 
-                        serverId 
-                        MQ.empty 
-                        HM.empty 
+    lme <- newMVar $ LamportMutualExclusion
+                        LTS.new
+                        serverId
+                        MQ.empty
+                        HM.empty
                         (ServerReplies HM.empty)
     return $ Lme lme b
 
@@ -69,33 +73,33 @@ new serverId b = do
 request :: (MB.Broker br, CS.CriticalSection cs) => Lme br cs -> cs -> IO ()
 request lmeObj critSect = do
     lme <- takeMVar $ boxed lmeObj
-    (msg, lts') <- composeMessage 
-                        (lme ^. lts) 
-                        (serverId lme) 
-                        Nothing 
-                        Nothing 
+    (msg, lts') <- composeMessage
+                        (lme ^. lts)
+                        (serverId lme)
+                        Nothing
+                        Nothing
                         M.Request
-    let resources' = HM.insert (M.msgId msg) critSect (lme ^. resources) 
-    let replies' = createEmptyServerRepliesEntry 
-                        (lme ^. replies) 
-                        (M.msgId msg) 
+    let resources' = HM.insert (M.msgId msg) critSect (lme ^. resources)
+    let replies' = createEmptyServerRepliesEntry
+                        (lme ^. replies)
+                        (M.msgId msg)
                         (MB.peers $ broker lmeObj)
 
-    let queue' = lme ^. queue 
+    let queue' = lme ^. queue
     let queue'' = MQ.insert (M.timestamp msg) msg queue'
 
-    let lme' = (resources .~ resources') 
-                    . (replies .~ replies') 
-                    . (queue .~ queue'') 
-                    . (lts .~ lts') 
+    let lme' = (resources .~ resources')
+                    . (replies .~ replies')
+                    . (queue .~ queue'')
+                    . (lts .~ lts')
                     $ lme
     putMVar (boxed lmeObj) lme'
     MB.broadcast (broker lmeObj) msg
 
 -- Compose a message object from the data.
-composeMessage 
+composeMessage
     :: LTS.Lts        -- current Lamport timestamp for the algorithm
-    -> String         -- local server ID 
+    -> String         -- local server ID
     -> Maybe String   -- source request ID for a message (optional)
     -> Maybe Integer  -- previous message timestamp (optional)
     -> M.Type         -- message type
@@ -111,15 +115,15 @@ newUUID :: IO String
 newUUID = toString <$> randomIO
 
 -- TODO: consider modifyMVar_
--- Processes the inbound message and generates outbound message in some cases 
-handleMessage 
-    :: (MB.Broker br, CS.CriticalSection cs) 
-    => Lme br cs 
-    -> M.Message 
+-- Processes the inbound message and generates outbound message in some cases
+handleMessage
+    :: (MB.Broker br, CS.CriticalSection cs)
+    => Lme br cs
+    -> M.Message
     -> IO (Maybe M.Message)
 handleMessage lmeObj msg = do
     lme <- takeMVar (boxed lmeObj)
-    (lme', msg') <- case M.msgType msg of 
+    (lme', msg') <- case M.msgType msg of
                         M.Request -> handleRequest lme msg
                         M.Reply   -> handleReply lme msg
                         M.Release -> handleRelease lme msg
@@ -127,47 +131,47 @@ handleMessage lmeObj msg = do
     return msg'
     where
         handleRequest lme msg = do
-            let queueVal = lme ^. queue 
+            let queueVal = lme ^. queue
             let queue' = MQ.insert (M.timestamp msg) msg queueVal
 
-            (msg', lts') <- composeMessage 
+            (msg', lts') <- composeMessage
                                 (lme ^. lts)
                                 (serverId lme)
                                 (Just (M.msgId msg))
                                 (Just(M.timestamp msg))
-                                M.Reply 
+                                M.Reply
             let lme' = (queue .~ queue') . (lts .~ lts') $ lme
 
             return (lme', Just msg')
         handleReply lme msg = do
-            let queueVal = lme ^. queue 
+            let queueVal = lme ^. queue
             let (_, firstMsg) = MQ.findMin queueVal
 
             let requestId = fromJust $ M.requestId msg
 
             let replies' = registerServerReply
-                                (lme ^. replies) 
+                                (lme ^. replies)
                                 requestId
                                 (M.serverId msg)
 
-            if (allReplyReceived replies' requestId) && 
+            if (allReplyReceived replies' requestId) &&
                (M.msgId firstMsg == requestId)
                 then do
                     let queue' = MQ.deleteMin queueVal
-                    
+
                     -- execute critical section.
                     CS.execute $ (lme ^. resources) HM.! requestId
 
-                    (msg', lts') <- composeMessage 
+                    (msg', lts') <- composeMessage
                                         (lme ^. lts)
                                         (serverId lme)
                                         (M.requestId msg)
                                         (Just(M.timestamp msg))
-                                        M.Release 
+                                        M.Release
                     let replies'' = removeServerReplyEntry replies' requestId
-                    let lme' =   (replies .~ replies'') 
-                               . (queue .~ queue') 
-                               . (lts .~ lts') 
+                    let lme' =   (replies .~ replies'')
+                               . (queue .~ queue')
+                               . (lts .~ lts')
                                $ lme
 
                     return (lme', Just msg')
@@ -176,19 +180,19 @@ handleMessage lmeObj msg = do
                     return (lme',  Nothing)
         handleRelease lme msg = do
             let requestId = fromJust $ M.requestId msg
-            let queueVal = lme ^. queue 
+            let queueVal = lme ^. queue
             let ((_,firstMsg), queue') = MQ.deleteFindMin queueVal
             when (M.msgId firstMsg /= requestId) $
                 return $ error "Unexpected first message in the queue on release."
-            
+
             let lme' = queue .~ queue' $ lme
 
             return (lme',  Nothing)
 
 
 -- | Process a single incoming message. Should be run in a cycle.
-runMessagePipeline 
-    :: (MB.Broker br, CS.CriticalSection cs) 
+runMessagePipeline
+    :: (MB.Broker br, CS.CriticalSection cs)
     => Lme br cs
     -> IO ()
 runMessagePipeline lmeObj = do
@@ -199,10 +203,10 @@ runMessagePipeline lmeObj = do
         handleMsg m = do
             print $ "Handling message: " ++ show m
             newMsg <- handleMessage lmeObj m
-            forM_ newMsg $ sendMsg (broker lmeObj) (M.serverId m) 
+            forM_ newMsg $ sendMsg (broker lmeObj) (M.serverId m)
         printErr = print "Corrupted message detected."
         sendMsg br inputServerId msg' = do
-            case M.msgType msg' of 
+            case M.msgType msg' of
                  M.Reply   -> MB.send br inputServerId msg'
                  M.Release -> MB.broadcast br msg'
                  _         -> return ()
@@ -211,28 +215,28 @@ runMessagePipeline lmeObj = do
 
 -- Creates new 'server replies' entry for the request. Fills default flag
 -- values to 'False' for known peer servers.
-createEmptyServerRepliesEntry 
-    :: ServerReplies 
-    -> String 
-    -> [String] 
+createEmptyServerRepliesEntry
+    :: ServerReplies
+    -> String
+    -> [String]
     -> ServerReplies
-createEmptyServerRepliesEntry sr msgId peers = ServerReplies $ 
+createEmptyServerRepliesEntry sr msgId peers = ServerReplies $
     HM.insert msgId (HM.fromList $ zip peers (repeat False)) (serverReplies sr)
 
 -- Sets 'server reply' to True
 registerServerReply :: ServerReplies -> String -> String -> ServerReplies
-registerServerReply sr requestId serverId = 
+registerServerReply sr requestId serverId =
     let repliesOuterMap = serverReplies sr in
-    let repliesInnerMap = repliesOuterMap HM.! requestId in 
-    ServerReplies $ HM.insert 
-                        requestId 
-                        (HM.insert serverId True repliesInnerMap) 
+    let repliesInnerMap = repliesOuterMap HM.! requestId in
+    ServerReplies $ HM.insert
+                        requestId
+                        (HM.insert serverId True repliesInnerMap)
                         repliesOuterMap
 
 -- Looks through server replies for a given request ID. Returns true if all
 -- servers replied.
 allReplyReceived :: ServerReplies -> String -> Bool
-allReplyReceived sr requestId = 
+allReplyReceived sr requestId =
     let replies = serverReplies sr in
     let peersPermissions = replies HM.! requestId in
     let allPermissionReceived = and $ HM.elems peersPermissions
@@ -240,5 +244,5 @@ allReplyReceived sr requestId =
 
 -- Deletes 'server reply' entry by the request ID.
 removeServerReplyEntry :: ServerReplies -> String -> ServerReplies
-removeServerReplyEntry sr requestId = ServerReplies $ 
+removeServerReplyEntry sr requestId = ServerReplies $
     HM.delete requestId (serverReplies sr)

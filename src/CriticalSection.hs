@@ -6,20 +6,20 @@ module CriticalSection
     , ProtectedCounter(..)
     ) where
 
-import Control.Concurrent.MVar
+import           Control.Concurrent.MVar
 
 -- | The CriticalSection class represents a resource that needs protection.
 class CriticalSection a  where
     -- Access the protected resource and/or execute an action on it.
     execute   :: a -> IO ()
 
--- | CriticalSection example - prints message. 
+-- | CriticalSection example - prints message.
 -- Execution wrapped as a protected resource.
 newtype DummyResource = DummyResource String deriving (Show)
 instance CriticalSection DummyResource where
     execute dummy = print dummy
 
--- | CriticalSection example - increments a counter. 
+-- | CriticalSection example - increments a counter.
 -- Execution wrapped as a protected resource.
 newtype ProtectedCounter = ProtectedCounter { counter :: MVar Integer }
 instance CriticalSection ProtectedCounter where
