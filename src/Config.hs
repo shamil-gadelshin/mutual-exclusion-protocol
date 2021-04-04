@@ -6,10 +6,10 @@
 -- configuration parameters.
 
 module Config
-    ( loadConfigurationFromFile
-    , Configuration(..)
-    , ServerCfg(..)
-    ) where
+  ( loadConfigurationFromFile
+  , Configuration(..)
+  , ServerCfg(..)
+  ) where
 
 import           Control.Applicative
 import           Control.Exception
@@ -30,57 +30,57 @@ newtype CommandLineArguments = CommandLineArguments {
 
 -- | Cluster configuration.
 data Configuration = Configuration
-    { local   :: ServerCfg -- local node
-    -- remote nodes
-    , remotes :: [ServerCfg] -- remote nodes
-    }
-    deriving (Show)
+  { local   :: ServerCfg -- local node
+  -- remote nodes
+  , remotes :: [ServerCfg] -- remote nodes
+  }
+  deriving (Show)
 
 -- | Node configuration.
 data ServerCfg = ServerCfg
-    { pid  :: String -- unique ID
-    -- TCP-port for local runs
-    , port :: String -- TCP-port for local runs
-    }
-    deriving (Show)
+  { pid  :: String -- unique ID
+  -- TCP-port for local runs
+  , port :: String -- TCP-port for local runs
+  }
+  deriving (Show)
 
 
 -- | Loads a configuration from the provided config-file name.
 loadConfigurationFromFile :: IO Configuration
 loadConfigurationFromFile = do
-    cla <- cmdArgs CommandLineArguments { config = def}
-    let fileName = config cla
-    json <- catch
-                (decodeFileStrict fileName :: IO (Maybe Configuration))
-                printLoadErr
-    return $ fromMaybe printDecodeErr json
-        where
-            printLoadErr :: SomeException -> IO (Maybe Configuration)
-            printLoadErr = error "Cannot load configuration file."
-            printDecodeErr = error "Cannot decode configuration file."
+  cla <- cmdArgs CommandLineArguments { config = def}
+  let fileName = config cla
+  json <- catch
+            (decodeFileStrict fileName :: IO (Maybe Configuration))
+            printLoadErr
+  return $ fromMaybe printDecodeErr json
+    where
+      printLoadErr :: SomeException -> IO (Maybe Configuration)
+      printLoadErr = error "Cannot load configuration file."
+      printDecodeErr = error "Cannot decode configuration file."
 
 -- Tell Aeson how to create an ServerCfg object from JSON string.
 instance FromJSON ServerCfg where
-     parseJSON (Object v) = ServerCfg <$>
-                            v .:  "pid"  <*>
-                            v .:  "port"
+  parseJSON (Object v) = ServerCfg <$>
+                        v .:  "pid"  <*>
+                        v .:  "port"
 
 -- Tell Aeson how to convert an ServerCfg object to a JSON string.
 instance ToJSON ServerCfg where
-     toJSON (ServerCfg pid port) =
-         object [ "pid" .= pid
-                , "port" .= port
-                ]
+  toJSON (ServerCfg pid port) =
+      object [ "pid" .= pid
+            , "port" .= port
+            ]
 
 -- Tell Aeson how to create an Configuration object from JSON string.
 instance FromJSON Configuration where
-     parseJSON (Object v) = Configuration <$>
-                            v .:  "local" <*>
-                            v .:  "remotes"
+  parseJSON (Object v) = Configuration <$>
+                        v .:  "local" <*>
+                        v .:  "remotes"
 
 -- Tell Aeson how to convert an Configuration object to a JSON string.
 instance ToJSON Configuration where
-     toJSON (Configuration local remotes) =
-         object [ "local" .= local
-                , "remotes" .= remotes
-                ]
+  toJSON (Configuration local remotes) =
+      object [ "local" .= local
+            , "remotes" .= remotes
+            ]

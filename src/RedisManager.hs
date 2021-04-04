@@ -3,9 +3,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module RedisManager
-    ( incrementCounter
-    , showCounter
-    ) where
+  ( incrementCounter
+  , showCounter
+  ) where
 
 import           Control.Concurrent
 import           Control.Monad
@@ -19,24 +19,24 @@ import           Database.Redis
 -- | Increment redis-based counter.
 incrementCounter :: IO ()
 incrementCounter = do
-    conn <- connect defaultConnectInfo
-    runRedis conn $ do
-        counter <- get counterName
-        let convCounter = convertCounterValue $ (join . rightToMaybe) counter
-        let next = toByteString' . (+1) <$> convCounter
-        set counterName $ fromMaybe "0" next
-        liftIO $ threadDelay 1000000
-        final <- get counterName
-        liftIO $ print final
+  conn <- connect defaultConnectInfo
+  runRedis conn $ do
+    counter <- get counterName
+    let convCounter = convertCounterValue $ (join . rightToMaybe) counter
+    let next = toByteString' . (+1) <$> convCounter
+    set counterName $ fromMaybe "0" next
+    liftIO $ threadDelay 1000000
+    final <- get counterName
+    liftIO $ print final
 
 -- | Show redis-based counter.
 showCounter :: IO ()
 showCounter = do
-    conn <- connect defaultConnectInfo
-    runRedis conn $ do
-        counter <- get counterName
-        liftIO $ print counter
-        liftIO $ threadDelay 300000
+  conn <- connect defaultConnectInfo
+  runRedis conn $ do
+    counter <- get counterName
+    liftIO $ print counter
+    liftIO $ threadDelay 300000
 
 -- Get protected redis resource name
 counterName :: ByteString

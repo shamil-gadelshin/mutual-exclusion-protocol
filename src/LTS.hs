@@ -2,13 +2,13 @@
 --   https://en.wikipedia.org/wiki/Lamport_timestamp
 
 module LTS
-    ( touch
-    , update
-    , new
-    , peek
-    , create
-    , Lts(..)
-    ) where
+  ( touch
+  , update
+  , new
+  , peek
+  , create
+  , Lts(..)
+  ) where
 
 -- | Lamport timestamp type
 newtype Lts = Lts Integer deriving (Show, Eq)
