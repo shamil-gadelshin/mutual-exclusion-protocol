@@ -49,25 +49,25 @@ main = do
   lme <- LME.new serverId broker
 
   -- setup working threads
-      -- fork threads for message transport
-          -- setup server thread
+    -- fork threads for message transport
+        -- setup server thread
   forkIO $ runServer localPort inChan
 
-          -- setup client threads
+        -- setup client threads
   let remotePorts = map port remoteServers
   let portsAndChans = mzip remotePorts outChans
   mapM_ (\(port, chan) -> forkIO $ runClient port chan) portsAndChans
 
-      -- fork algorithm working thread
+    -- fork algorithm working thread
   forkIO $ forever $ LME.runMessagePipeline lme
 
   -- random delay before request generation to avoid initial LTS overlap
-  randomDelay <- randomRIO (0, 5000000) -- from 0 to 5 sed
+  randomDelay <- randomRIO (2000000, 6000000) -- from 2 to 6 sec
   liftIO $ threadDelay randomDelay
 
   -- initialize task creator
   --forever $ runMessageSource lme
-  replicateM_ 10 $ runMessageSource lme
+  replicateM_ 100 $ runMessageSource lme
 
   print "Done."
   liftIO $ threadDelay 100000000 -- 100 seconds
@@ -80,4 +80,4 @@ runMessageSource lme = do
 
   LME.request lme $ R.RedisCounter "YCounter"
 
-  liftIO $ threadDelay 3000000 -- 3 sec
+  liftIO $ threadDelay 500000 -- 0.5 sec
