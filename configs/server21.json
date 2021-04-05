@@ -1,0 +1,16 @@
+{
+  "local" : {
+      "pid" : "server1",
+      "port": "9001"
+  },
+  "remotes" : [
+    {
+      "pid" : "server2",
+      "port": "9002"
+    },
+    {
+      "pid" : "server3",
+      "port": "9003"
+    }
+  ]
+}
