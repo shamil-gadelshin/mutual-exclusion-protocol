@@ -30,19 +30,19 @@ newtype CommandLineArguments = CommandLineArguments {
 
 -- | Cluster configuration.
 data Configuration = Configuration
-  { local   :: ServerCfg -- local node
-  -- remote nodes
-  , remotes :: [ServerCfg] -- remote nodes
-  }
-  deriving (Show)
+    { local   :: ServerCfg -- local node
+    -- remote nodes
+    , remotes :: [ServerCfg] -- remote nodes
+    }
+    deriving (Show)
 
 -- | Node configuration.
 data ServerCfg = ServerCfg
-  { pid  :: String -- unique ID
-  -- TCP-port for local runs
-  , port :: String -- TCP-port for local runs
-  }
-  deriving (Show)
+    { pid  :: String -- unique ID
+    -- TCP-port for local runs
+    , port :: String -- TCP-port for local runs
+    }
+    deriving (Show)
 
 
 -- | Loads a configuration from the provided config-file name.

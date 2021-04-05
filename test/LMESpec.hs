@@ -7,10 +7,10 @@ import           Control.Concurrent.Chan
 import           Control.Concurrent.MVar
 import           Data.Maybe
 
-import qualified CriticalSection         as CS
 import qualified LME
 import qualified Message                 as M
 import qualified MessageBroker           as MB
+import qualified Resource                as R
 
 spec :: Spec
 spec = do
@@ -24,7 +24,7 @@ spec = do
         lme <- LME.new "LocalServer" broker
 
         -- Create a local request
-        LME.request lme $ CS.DummyResource "Dummy"
+        LME.request lme $ R.DummyResource "Dummy"
 
         let msgStr = readChan outChan
         maybeMsg <- M.decodeMessage <$> msgStr
@@ -45,7 +45,7 @@ spec = do
         lme <- LME.new "LocalServer" broker
 
         -- Create a local request
-        LME.request lme $ CS.DummyResource "Dummy"
+        LME.request lme $ R.DummyResource "Dummy"
 
         let requestStr = readChan outChan
         maybeRequest <- M.decodeMessage <$> requestStr
@@ -77,13 +77,13 @@ spec = do
         let broker = MB.new inChan outChans
         lme <- LME.new "LocalServer" broker
         let initialValue = 100
-        pc <- CS.ProtectedCounter <$> newMVar initialValue
+        pc <- R.ProtectedCounter <$> newMVar initialValue
 
         -- Create a local request with counter
         LME.request lme pc
 
         -- No counter changes
-        afterRequestValue <- readMVar (CS.counter pc)
+        afterRequestValue <- readMVar (R.counter pc)
         afterRequestValue `shouldBe` initialValue
 
 
@@ -100,5 +100,5 @@ spec = do
         LME.runMessagePipeline lme
 
         -- Counter was incremented
-        finalValue <- readMVar (CS.counter pc)
+        finalValue <- readMVar (R.counter pc)
         finalValue `shouldBe` initialValue + 1

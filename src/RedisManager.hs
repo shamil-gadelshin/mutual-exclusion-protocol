@@ -25,9 +25,7 @@ incrementCounter = do
     let convCounter = convertCounterValue $ (join . rightToMaybe) counter
     let next = toByteString' . (+1) <$> convCounter
     set counterName $ fromMaybe "0" next
-    liftIO $ threadDelay 1000000
-    final <- get counterName
-    liftIO $ print final
+    return ()
 
 -- | Show redis-based counter.
 showCounter :: IO ()
@@ -36,11 +34,10 @@ showCounter = do
   runRedis conn $ do
     counter <- get counterName
     liftIO $ print counter
-    liftIO $ threadDelay 300000
 
 -- Get protected redis resource name
 counterName :: ByteString
-counterName = "xcounter"
+counterName = "xxcounter"
 
 -- Helper function: converts a string to an integer.
 convertCounterValue :: Maybe ByteString -> Maybe Integer

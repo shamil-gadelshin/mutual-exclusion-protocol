@@ -5,7 +5,7 @@ import qualified LTS
 import           Test.Hspec
 
 spec :: Spec
-spec = doS
+spec = do
   describe "LTS" $ do
     it "`new` works" $ do
       LTS.new `shouldBe` LTS.Lts 1

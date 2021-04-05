@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: dec629870f8a485e3b367e1f7470b3af3e9f17598c0d37abbfdb29f1e222187a
+-- hash: 0b0160f35d8ec40fad1354910ee16d9d3062cd6dfa88255707d3f8f949b3fe42
 
 name:           mep
 version:        0.1.0.0
@@ -32,6 +32,7 @@ library
       Message
       MessageBroker
       RedisManager
+      Resource
       TcpManager
   other-modules:
       Paths_mep

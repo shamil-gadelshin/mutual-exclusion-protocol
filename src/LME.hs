@@ -31,10 +31,10 @@ type MessagePriorityQueue = MQ.MinPQueue Integer M.Message
 -- TODO: Consider gadt
 -- | Lamport mutual exclusion algoritm helper.
 data Lme b cs = Lme
-  { boxed  :: MVar (LamportMutualExclusion cs)
-  -- abstract message broker
-  , broker :: b -- abstract message broker
-  }
+    { boxed  :: MVar (LamportMutualExclusion cs)
+    -- abstract message broker
+    , broker :: b -- abstract message broker
+    }
 
 -- Collects replies from other servers for local requests
 -- combined by original requests IDs
@@ -45,15 +45,16 @@ newtype ServerReplies = ServerReplies
 
 -- Data structure for the Lamport mutual exclusion algorithm.
 data LamportMutualExclusion cs = LamportMutualExclusion
-  { _lts       :: LTS.Lts -- current Lamport timestamp
-  -- local server ID
-  , serverId   :: String -- local server ID
-  , _queue     :: MessagePriorityQueue
-  , _resources :: HM.HashMap String cs -- protected resources
-  -- replies from the peers
-  , _replies   :: ServerReplies -- replies from the peers
-  }
-  deriving (Show)
+    { _lts       :: LTS.Lts -- current Lamport timestamp
+    -- local server ID
+    , serverId   :: String -- local server ID
+    , _queue     :: MessagePriorityQueue
+    -- protected resources
+    , _resources :: HM.HashMap String cs -- protected resources
+    -- replies from the peers
+    , _replies   :: ServerReplies -- replies from the peers
+    }
+    deriving (Show)
 
 $(makeLenses ''LamportMutualExclusion)
 

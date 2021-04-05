@@ -30,26 +30,26 @@ decodeMessage =  decode . LBS.fromStrict
 -- | Defines message type: request resource the cluster, reply from peer and
 -- release the resource.
 data Type = Request
-  | Reply
-  | Release
-  deriving (Show, Eq, Generic)
+    | Reply
+    | Release
+    deriving (Show, Eq, Generic)
 
 instance FromJSON Type
 instance ToJSON Type
 
 -- | Defines protocol message.
 data Message = Message
-  { msgId     :: String
-  -- | Lamport timestamp
-  , timestamp :: Integer
-  -- | Message type
-  , msgType   :: Type
-  -- | Peer server ID
-  , serverId  :: String
-  -- | Source request id
-  , requestId :: Maybe String
-  }
-  deriving (Show, Eq)
+    { msgId     :: String
+    -- | Lamport timestamp
+    , timestamp :: Integer
+    -- | Message type
+    , msgType   :: Type
+    -- | Peer server ID
+    , serverId  :: String
+    -- | Source request id
+    , requestId :: Maybe String
+    }
+    deriving (Show, Eq)
 
 -- | Tell Aeson how to create an Message object from JSON string.
 instance FromJSON Message where
