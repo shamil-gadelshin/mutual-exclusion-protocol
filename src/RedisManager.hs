@@ -17,8 +17,8 @@ import           Data.Maybe
 import           Database.Redis
 
 -- | Increment redis-based counter.
-incrementCounter :: IO ()
-incrementCounter = do
+incrementCounter :: ByteString -> IO ()
+incrementCounter counterName = do
   conn <- connect defaultConnectInfo
   runRedis conn $ do
     counter <- get counterName
@@ -28,16 +28,12 @@ incrementCounter = do
     return ()
 
 -- | Show redis-based counter.
-showCounter :: IO ()
-showCounter = do
+showCounter :: ByteString -> IO ()
+showCounter counterName = do
   conn <- connect defaultConnectInfo
   runRedis conn $ do
     counter <- get counterName
     liftIO $ print counter
-
--- Get protected redis resource name
-counterName :: ByteString
-counterName = "xxcounter"
 
 -- Helper function: converts a string to an integer.
 convertCounterValue :: Maybe ByteString -> Maybe Integer

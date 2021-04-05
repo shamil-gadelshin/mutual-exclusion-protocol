@@ -66,14 +66,18 @@ main = do
   liftIO $ threadDelay randomDelay
 
   -- initialize task creator
-  forever $ runMessageSource lme
+  --forever $ runMessageSource lme
+  replicateM_ 10 $ runMessageSource lme
+
+  print "Done."
+  liftIO $ threadDelay 100000000 -- 100 seconds
 
 
-runMessageSource :: (MB.Broker br) => LME.Lme br R.DummyResource -> IO ()
+runMessageSource :: (MB.Broker br) => LME.Lme br R.RedisCounter -> IO ()
 runMessageSource lme = do
   config <- loadConfigurationFromFile
   let localPort = port $ local config
 
-  LME.request lme $ R.DummyResource "Dummy"
+  LME.request lme $ R.RedisCounter "YCounter"
 
   liftIO $ threadDelay 3000000 -- 3 sec

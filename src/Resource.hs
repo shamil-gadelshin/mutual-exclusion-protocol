@@ -4,10 +4,14 @@ module Resource
   (
    DummyResource(..)
   , ProtectedCounter(..)
+  , RedisCounter(..)
   ) where
 
 import           Control.Concurrent.MVar
+import           Data.ByteString.Char8
+
 import qualified CriticalSection         as CS
+import qualified RedisManager            as RM
 
 
 -- | CriticalSection example - prints message.
@@ -23,3 +27,10 @@ instance CS.CriticalSection ProtectedCounter where
   execute pc = do
     value <- takeMVar (counter pc)
     putMVar (counter pc) (value + 1)
+
+-- | CriticalSection example - increments a redis-based counter.
+-- Execution wrapped as a protected resource.
+newtype RedisCounter = RedisCounter { counterName :: ByteString }
+instance CS.CriticalSection RedisCounter where
+  execute rc = do
+    RM.incrementCounter $ counterName rc
